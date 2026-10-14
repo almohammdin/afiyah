@@ -4,7 +4,7 @@
 
 This release lives at `/afiyah/v2/`. The existing main application and its records remain available at `/afiyah/`. It uses `carePatients` and `careMemberships`; no migration, deletion, or alteration of existing patient records is performed automatically.
 
-Before using real patient data, publish the complete `firestore-v2.rules` file to project `afiyah-92974`, database `(default)`. This file preserves the existing v1 rules and adds the v2 namespace. GitHub Pages deployment **does not deploy Firebase rules**. There is no billing change. Do not replace the root application until authenticated saving and sharing have been verified against the deployed rules and a migration plan has been approved.
+The complete `firestore-v2.rules` file was compiled and deployed successfully on 2026-10-14 to project `afiyah-92974`, database `(default)` using the authorized project account. This file preserves the existing v1 rules and adds the v2 namespace. GitHub Pages deployment **does not deploy Firebase rules**. There is no billing change. The original application remains available for existing records; the upgraded workspace is linked from its landing page. A migration plan is needed before retiring legacy records.
 
 ## Implemented
 
@@ -34,7 +34,7 @@ Clinical interaction lookup is deferred pending a maintained and licensed medica
 
 GitHub Actions runs the Firestore emulator suite in `v2/tests/rules.test.mjs`, including anonymous/unverified/outsider denial, read-only versus editor access, profile segregation, ownership escalation, audit tampering, payload validation, invitation acceptance/revocation, concurrent caregivers, and deletion isolation.
 
-Auth popup behavior on actual mobile browsers and production end-to-end persistence require a signed-in user after rules publication. No automated test signs in as the patient or creates real medical records.
+Deployment succeeded after all 16 automated tests passed (3 existing, 5 v2 domain/UI, 8 emulator security tests). Auth popup behavior on actual mobile browsers and production end-to-end persistence still require a signed-in user verification. No automated test signs in as the patient or creates real medical records.
 
 ## Deferred
 
