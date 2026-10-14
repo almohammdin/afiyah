@@ -60,3 +60,5 @@ body:has(.main-nav){padding-bottom:0}
 @media(max-width:850px){.main-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}.main-nav button{padding:8px 4px;flex-direction:column;gap:4px}.main-nav button>span{font-size:13px}}
 @media(max-width:420px){.main-nav{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(min-width:851px){.main-nav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}.main-nav button{padding-inline:6px}.main-nav button>span{white-space:normal}}
+
+.approved-logo{display:block;position:relative;width:130px;height:40px;overflow:hidden;flex-shrink:0}.brand .approved-logo img{position:absolute;width:171px;height:85.5px;max-width:none;left:-21px;top:-24px}
