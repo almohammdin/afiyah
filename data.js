@@ -1,4 +1,4 @@
-import {makeExample} from './example-patient.js';
+import {makeExample} from './example-patient.js?v=20261015-example-copy';
 import {localInstant,recordable,eventWarnings,zones} from './care-time.js';
 import {config} from './config.js';
 import {sections,day,validate,slotId,doseWarnings,active} from './domain.js?v=20261014-care-fixes';
