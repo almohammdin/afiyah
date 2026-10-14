@@ -35,7 +35,7 @@ jobs:
       - name: Prepare public files
         run: |
           mkdir -p public
-          cp index.html style.css base.css app.js data.js dashboard.js domain.js footer.js config.js manifest.webmanifest public/
+          cp index.html style.css base.css app.js data.js dashboard.js domain.js care-time.js footer.js config.js manifest.webmanifest public/
           cp -R assets public/
           touch public/.nojekyll
       - uses: actions/configure-pages@v5

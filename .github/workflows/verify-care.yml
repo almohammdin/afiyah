@@ -1,0 +1,23 @@
+name: Verify care improvements
+on:
+  push:
+    branches: [afiyah-care-fixes-20261014]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run check && npm test
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm install --no-save --ignore-scripts firebase@11.10.0 @firebase/rules-unit-testing@4.0.1 firebase-tools@14.22.0
+      - run: npx firebase emulators:exec --only firestore --project demo-afiyah --config firebase.test.json 'node --test tests/rules.test.mjs'
