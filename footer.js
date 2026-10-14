@@ -1,4 +1,4 @@
-export const footer=()=>`<footer class="creator-footer"><a class="creator-signature" href="https://almohammdin.github.io/mycv/" target="_blank" rel="noopener noreferrer" aria-label="إعداد نايف المحمدي"><span>إعداد</span><img src="/afiyah/assets/naif-signature-white.png" alt="نايف المحمدي" width="72" height="34"></a><div class="footer-social-cluster">
+export const footer=()=>`<footer class="creator-footer"><div class="footer-dedication"><p>منصة عافية وقف عن (نورة المحمدي)</p><p>اللهم بارك في نفعها، وضاعف لها ولوالديها ثوابها</p></div><div class="footer-creator"><a class="creator-signature" href="https://almohammdin.github.io/mycv/" target="_blank" rel="noopener noreferrer" aria-label="إعداد نايف المحمدي"><span>إعداد</span><img src="/afiyah/assets/naif-signature-white.png" alt="نايف المحمدي" width="58" height="27"></a><div class="footer-social-cluster">
         <a class="social-username" href="https://linktr.ee/almohammdin" target="_blank" rel="noopener noreferrer">@almohammdin</a>
         <nav class="social-links" aria-label="حسابات التواصل">
           <a href="https://x.com/almohammdin" target="_blank" rel="noopener noreferrer" aria-label="إكس"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.4 3h4.8l3.8 5.1L17.5 3H20l-5.9 6.9L20.5 21h-4.8l-4.2-5.7L6.6 21H4l6.3-7.5L4.4 3Zm3.7 2 8.5 14h1.8L9.9 5H8.1Z"/></svg></a>
@@ -6,4 +6,4 @@ export const footer=()=>`<footer class="creator-footer"><a class="creator-signat
           <a href="https://www.snapchat.com/add/almohammdin" target="_blank" rel="noopener noreferrer" aria-label="سناب شات"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 16.9c.8.3 1.1.7 1.3 1.1.7-.1 1.5-.2 2.5-.2s1.8.1 2.5.2c.2-.4.5-.8 1.3-1.1 1.2-.4 2.1-1 2.5-1.6-1.9-.7-2.1-2.3-2.1-4.7 0-2.7-1.7-4.5-4.2-4.5s-4.2 1.8-4.2 4.5c0 2.4-.2 4-2.1 4.7.4.6 1.3 1.2 2.5 1.6Z"/></svg></a>
           <a href="https://linktr.ee/almohammdin" target="_blank" rel="noopener noreferrer" aria-label="لينك تري"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.736 5.852 17.644 2l1.92 1.92-3.852 3.736h5.644v2.736h-5.66l3.868 3.752-1.92 1.92-5.276-5.28-5.276 5.28-1.92-1.92 3.868-3.752H3.38V7.656h5.644L5.172 3.92 7.092 2l3.932 3.852V0h2.712v5.852ZM11.024 24v-8.604h2.712V24h-2.712Z"/></svg></a>
         </nav>
-      </div></footer>`;
+      </div></div></footer>`;
