@@ -1,8 +1,8 @@
 import {localParts,recordable,displayTime,appointmentICS} from './care-time.js';
-import {shiftDate,shiftMonth,calendarDays,dateLabel,monthLabel,weekNames,timeline,weekRecording} from './dashboard.js?v=20261014-care-fixes';
-import * as D from './data.js?v=20261014-care-fixes';
-import {sections,labels,latin,day,doses,active,times,duplicates,errorMessage} from './domain.js?v=20261014-care-fixes';
-import {footer} from './footer.js?v=20261014-care-fixes';
+import {shiftDate,shiftMonth,calendarDays,dateLabel,monthLabel,weekNames,timeline,weekRecording} from './dashboard.js?v=20261014-care-fixes2';
+import * as D from './data.js?v=20261014-care-fixes2';
+import {sections,labels,latin,day,doses,active,times,duplicates,errorMessage} from './domain.js?v=20261014-care-fixes2';
+import {footer} from './footer.js?v=20261014-care-fixes2';
 const $=s=>document.querySelector(s),e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let ps=[],p=null,entries={},people=[],pending=[],tab='today',busy=false,loading=false,refreshVersion=0,calendarDate='',calendarMode='month';
 const patientKey=x=>x?`${x._legacy?'original':'care'}:${x.id}`:'';
