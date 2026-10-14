@@ -30,6 +30,6 @@ test('complete demo flow: create, edit, search, share, and safe HTML rendering',
  click('[data-view="patients"]');click('[data-act="add-patient"]');
  document.querySelector('[name="name"]').value='ملف ثان';click('#editor [type="submit"]');await tick();
  assert.match(document.body.textContent,/ملف ثان/);assert.ok(!document.body.textContent.includes('<img src=x onerror=alert(1)>'));
- click('[data-act="logout"]');await tick();assert.match(document.body.textContent,/ابدأ بحساب Google/);
+ click('[data-act="logout"]');await tick();assert.match(document.body.textContent,/إنشاء حساب/);
  dom.window.close();
 });
