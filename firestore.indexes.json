@@ -1,0 +1,1 @@
+{"indexes":[{"collectionGroup":"memberships","queryScope":"COLLECTION","fields":[{"fieldPath":"ownerId","order":"ASCENDING"},{"fieldPath":"patientId","order":"ASCENDING"}]}],"fieldOverrides":[]}

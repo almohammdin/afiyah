@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signed() { return request.auth != null && request.auth.token.email_verified == true; }
+  function owner(pid) { return signed() && get(/databases/$(database)/documents/patients/$(pid)).data.ownerId == request.auth.uid; }
+  function grant(pid) { return get(/databases/$(database)/documents/memberships/$(pid + '_' + request.auth.token.email.lower())).data; }
+  function active(pid) { return signed() && grant(pid).status == 'active'; }
+  function readSection(pid,s) { return owner(pid) || (active(pid) && s in grant(pid).readSections); }
+  function editSection(pid,s) { return owner(pid) || (active(pid) && s in grant(pid).editSections); }
+  function validPatient(d) { return d.keys().hasOnly(['ownerId','name','relation','birthYear','blood','allergies','conditions','createdAt']) && d.name is string && d.name.size() > 0 && d.name.size() <= 120 && d.ownerId is string; }
+  match /patients/{pid} {
+   allow create: if signed() && request.resource.data.ownerId == request.auth.uid && validPatient(request.resource.data);
+   allow read: if signed() && (resource.data.ownerId == request.auth.uid || active(pid));
+   allow update: if owner(pid) && request.resource.data.ownerId == resource.data.ownerId && validPatient(request.resource.data);
+   allow delete: if false;
+   match /{section}/{rid} {
+    allow read: if section in ['medications','appointments','tasks','reports'] && readSection(pid,section);
+    allow create, update: if section in ['medications','appointments','tasks','reports'] && editSection(pid,section)
+      && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 200
+      && request.resource.data.updatedAt is string && request.resource.data.updatedBy is string;
+    allow delete: if section in ['medications','appointments','tasks','reports'] && editSection(pid,section);
+   }
+   match /audit/{aid} {
+    allow read: if owner(pid);
+    allow create: if signed() && request.resource.data.actorId == request.auth.uid
+      && request.resource.data.section in ['medications','appointments','tasks','reports']
+      && editSection(pid,request.resource.data.section)
+      && request.resource.data.keys().hasOnly(['actorId','actor','section','action','at']);
+    allow update, delete: if false;
+   }
+  }
+  match /memberships/{mid} {
+   function valid(d) {
+    return d.keys().hasOnly(['email','patientId','ownerId','patientName','status','readSections','editSections'])
+     && d.email is string && d.email == d.email.lower() && d.patientId is string
+     && mid == d.patientId + '_' + d.email
+     && d.readSections is list && d.editSections is list
+     && d.readSections.hasOnly(['medications','appointments','tasks','reports'])
+     && d.editSections.hasOnly(d.readSections)
+     && d.status in ['pending','active'];
+   }
+   allow read: if signed() && (resource.data.email == request.auth.token.email.lower() || resource.data.ownerId == request.auth.uid);
+   allow create: if signed() && owner(request.resource.data.patientId)
+     && request.resource.data.ownerId == request.auth.uid && request.resource.data.status == 'pending' && valid(request.resource.data);
+   allow update: if signed() && valid(request.resource.data)
+     && request.resource.data.patientId == resource.data.patientId
+     && request.resource.data.ownerId == resource.data.ownerId
+     && request.resource.data.email == resource.data.email
+     && ((owner(resource.data.patientId) && request.resource.data.status == 'pending')
+      || (resource.data.email == request.auth.token.email.lower() && resource.data.status == 'pending'
+       && request.resource.data.status == 'active' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])));
+   allow delete: if signed() && owner(resource.data.patientId);
+  }
+ }
+}
