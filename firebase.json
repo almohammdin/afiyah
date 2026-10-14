@@ -1,1 +1,28 @@
-{"firestore":{"rules":"firestore.rules","indexes":"firestore.indexes.json"},"emulators":{"firestore":{"port":8080},"ui":{"enabled":false},"singleProjectMode":true}}
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "emulators": {
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
+  },
+  "auth": {
+    "authorizedDomains": [
+      "afiyah-92974.firebaseapp.com",
+      "afiyah-92974.web.app",
+      "almohammdin.github.io"
+    ],
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "عافية",
+        "supportEmail": "naif123456@gmail.com"
+      }
+    }
+  }
+}

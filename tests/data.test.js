@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as D from '../data.js';
+import {config} from '../config.js';
 test('patient isolation, section permissions, record updates, and revocation in demo',async()=>{
  D.startDemo();const first=(await D.patients())[0];
  const second=await D.addPatient({name:'اختبار',relation:'',birthYear:'',blood:''});
@@ -17,5 +18,6 @@ test('patient isolation, section permissions, record updates, and revocation in 
  await D.logout();assert.equal(D.currentUser(),null);
 });
 test('live sign-in stays closed until backend configuration is explicitly enabled',async()=>{
- assert.equal(D.ready(),false);await assert.rejects(D.login());
+ const enabled=config.enabled;config.enabled=false;try{assert.equal(D.ready(),false);await assert.rejects(D.login());}finally{config.enabled=enabled;}
+ assert.equal(config.firebase.projectId,'afiyah-92974');
 });
