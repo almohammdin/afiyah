@@ -25,3 +25,27 @@ h2,h3,.hero .hero-subtitle,.menu-card strong{font-family:"Thmanyah Sans",Tahoma,
 .date-preferences{font-size:13px;padding:8px 12px}.record-date{display:flex;align-items:center;gap:14px;margin:12px 0}
 .date-heading{margin:0}.date-preview{background:#eef6f4;border-radius:12px;padding:16px}.next-care .dual-date{margin:6px 0}.next-care .date-hijri{font-size:16px}
 @media(max-width:600px){.date-bar{gap:12px}.current-clock{padding-inline-start:12px}.date-hijri{font-size:17px}.date-gregorian{font-size:14px}.date-preferences{min-height:40px}.hero .hero-subtitle{font-size:23px}}
+/* Read dates right-to-left while keeping each number intact. */
+.dual-date{display:inline-flex;border:0;background:transparent;padding:0;cursor:pointer;text-align:right;color:inherit;border-radius:9px;max-width:100%}
+.dual-date:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+.date-content{display:flex;flex-direction:column;gap:4px;max-width:100%}
+.date-parts{display:inline-flex;direction:rtl;align-items:baseline;gap:4px}
+.date-parts bdi{unicode-bidi:isolate;white-space:nowrap}
+.date-hijri,.date-gregorian{padding:3px 9px;border-radius:6px;gap:6px}
+.date-hijri{background:#e5f2ed;font-size:16px}
+.date-gregorian{background:#edf1f7;color:#52627c;font-size:14px}
+.date-bar{display:inline-flex;gap:5px;padding:5px;border:1px solid #dbe5e5;border-radius:12px;background:#fff;margin-top:6px;flex-wrap:wrap;max-width:100%}
+.current-clock{align-self:stretch;justify-content:center;text-align:center;border:0;padding:6px 12px;background:#f6f0e5;border-radius:7px;gap:2px}
+.current-clock time{font-size:23px}.current-clock small{font-size:11px}
+body:has(.main-nav) header.top{padding-top:8px;padding-bottom:8px}
+body:has(.main-nav) header.top .actions{margin:0}
+.wrap:has(.main-nav){padding-top:12px;padding-bottom:10px}
+.dashboard-intro{margin:10px 0;gap:16px}.dashboard-intro h1{margin:2px 0;font-size:30px;line-height:1.25}
+.overview-cards{margin:12px 0;gap:12px}.overview-card{padding:11px 16px;gap:2px}.overview-card>strong{font-size:27px}
+.dashboard-columns .panel{margin:0;padding:16px}.dashboard-columns .section-title{margin-bottom:10px}
+.dashboard-columns .empty{padding:16px 10px}.dashboard-columns .empty p{margin-bottom:10px}
+.bar-chart{margin:12px 0 8px}.bar-track{height:90px}.chart-empty .bar-track{height:40px}
+.chart-day{gap:4px}.chart-note{margin-bottom:6px;line-height:1.5}
+.wrap:has(.creator-footer){padding-top:12px;padding-bottom:12px}
+@media(min-width:601px){.main-nav{margin:10px 0}.main-nav button{padding:8px 20px;min-height:44px}.dashboard-intro>div:first-child{display:grid;grid-template-columns:auto 1fr;align-items:center;column-gap:24px}.dashboard-intro .eyebrow{grid-column:1}.dashboard-intro h1{grid-column:1}.dashboard-intro .date-bar{grid-column:2;grid-row:1/3;margin-top:0}}
+@media(max-width:600px){.dashboard-intro{flex-wrap:wrap}.dashboard-intro>div:first-child{width:100%}.dashboard-intro .next-care{max-width:100%}.date-hijri{font-size:16px}.date-gregorian{font-size:14px}.overview-card{padding:10px 8px}.date-bar{gap:4px}.current-clock{padding:6px 9px}}
