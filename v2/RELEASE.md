@@ -16,7 +16,9 @@ The complete `firestore-v2.rules` file was compiled and deployed successfully on
 - Role edits preserve acceptance; participants can leave; tasks can be assigned to accepted participants
 - Journal, visit questions and visit summary; dated printable health/current-medication summary
 - Owner JSON export; paginated deletion with root last and resumable deleting state
-- Privacy notice and authority-to-manage declaration; no analytics scripts or persistent Firestore cache
+- Authority-to-manage declaration; no analytics scripts or persistent Firestore cache
+- Dashboard with actionable day counts, next dose/appointment, combined timeline, 7-day recording chart, monthly/weekly calendar and Latin-digit date picker
+- Five primary destinations and mobile bottom navigation; privacy button/dialog removed at owner request
 - Latin date/time fields and digit normalization, compact responsive UI, escaped user content, original creator footer
 - User-supplied social preview image retained byte-for-byte
 
