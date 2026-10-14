@@ -1,6 +1,6 @@
-import * as D from './data.js';
-import {sections,labels,latin,day,doses,active,times,duplicates,errorMessage} from './domain.js';
-import {footer} from './footer.js';
+import * as D from './data.js?v=20261014-final';
+import {sections,labels,latin,day,doses,active,times,duplicates,errorMessage} from './domain.js?v=20261014-final';
+import {footer} from './footer.js?v=20261014-final';
 const $=s=>document.querySelector(s),e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let ps=[],p=null,entries={},people=[],pending=[],tab='today',busy=false,loading=false,refreshVersion=0;
 const titles={today:'اليوم',...labels,sharing:'المشاركة',summary:'الملخص',audit:'سجل التغييرات',settings:'إدارة الملف'};
