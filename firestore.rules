@@ -1,55 +1,153 @@
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
-  function signed() { return request.auth != null && request.auth.token.email_verified == true; }
-  function owner(pid) { return signed() && get(/databases/$(database)/documents/patients/$(pid)).data.ownerId == request.auth.uid; }
-  function grant(pid) { return get(/databases/$(database)/documents/memberships/$(pid + '_' + request.auth.token.email.lower())).data; }
-  function active(pid) { return signed() && grant(pid).status == 'active'; }
-  function readSection(pid,s) { return owner(pid) || (active(pid) && s in grant(pid).readSections); }
-  function editSection(pid,s) { return owner(pid) || (active(pid) && s in grant(pid).editSections); }
-  function validPatient(d) { return d.keys().hasOnly(['ownerId','name','relation','birthYear','blood','allergies','conditions','createdAt']) && d.name is string && d.name.size() > 0 && d.name.size() <= 120 && d.ownerId is string; }
-  match /patients/{pid} {
-   allow create: if signed() && request.resource.data.ownerId == request.auth.uid && validPatient(request.resource.data);
-   allow read: if signed() && (resource.data.ownerId == request.auth.uid || active(pid));
-   allow update: if owner(pid) && request.resource.data.ownerId == resource.data.ownerId && validPatient(request.resource.data);
-   allow delete: if false;
-   match /{section}/{rid} {
-    allow read: if section in ['medications','appointments','tasks','reports'] && readSection(pid,section);
-    allow create, update: if section in ['medications','appointments','tasks','reports'] && editSection(pid,section)
-      && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 200
-      && request.resource.data.updatedAt is string && request.resource.data.updatedBy is string;
-    allow delete: if section in ['medications','appointments','tasks','reports'] && editSection(pid,section);
+  function careSigned(){return request.auth != null && request.auth.token.email_verified == true;}
+  function careParent(pid){return get(/databases/$(database)/documents/carePatients/$(pid)).data;}
+  function careOwner(pid){return careSigned() && careParent(pid).ownerId == request.auth.uid;}
+  function careGrant(pid){return get(/databases/$(database)/documents/careMemberships/$(pid+'_'+request.auth.token.email.lower())).data;}
+  function careMember(pid){return careSigned() && careGrant(pid).status == 'active' && careGrant(pid).memberUid == request.auth.uid;}
+  function careRead(pid,s){return careOwner(pid) || (!careParent(pid).deleting && careMember(pid) && s in careGrant(pid).readSections);}
+  function careWrite(pid,s){return careSigned() && !careParent(pid).deleting && (careOwner(pid) || (s != 'profile' && careMember(pid) && s in careGrant(pid).editSections));}
+  function carePurge(pid){return careOwner(pid) && careParent(pid).deleting;}
+  function str(d,k,n){return d[k] is string && d[k].size()<=n;}
+  function date(d,k){return str(d,k,10) && d[k].matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');}
+  function optionalDate(d,k){return d[k]=='' || date(d,k);}
+  function clock(t){return t is string && t.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$');}
+  function careBase(d){return d.name is string && d.name.size()>0 && d.name.size()<=200 && d.deleted is bool && d.revision is int && d.revision>0 && d.updatedById==request.auth.uid && d.updatedAt==request.time;}
+  function careSnapshot(pid,s,rid,d){
+    let a=getAfter(/databases/$(database)/documents/carePatients/$(pid)/audit/$(s+'_'+rid+'_'+string(d.revision))).data;
+    return a.snapshot==d && a.actorId==request.auth.uid && a.at==request.time && a.section==s && a.recordId==rid && a.revision==d.revision;
+  }
+  function validHospital(d){return d is map && d.keys().hasOnly(['hospital','number']) && str(d,'hospital',200) && d.hospital.size()>0 && str(d,'number',120) && d.number.size()>0;}
+  function validHospitals(a){return a is list && a.size()<=20 && (a.size()<=0 || validHospital(a[0])) && (a.size()<=1 || validHospital(a[1])) && (a.size()<=2 || validHospital(a[2])) && (a.size()<=3 || validHospital(a[3])) && (a.size()<=4 || validHospital(a[4])) && (a.size()<=5 || validHospital(a[5])) && (a.size()<=6 || validHospital(a[6])) && (a.size()<=7 || validHospital(a[7])) && (a.size()<=8 || validHospital(a[8])) && (a.size()<=9 || validHospital(a[9])) && (a.size()<=10 || validHospital(a[10])) && (a.size()<=11 || validHospital(a[11])) && (a.size()<=12 || validHospital(a[12])) && (a.size()<=13 || validHospital(a[13])) && (a.size()<=14 || validHospital(a[14])) && (a.size()<=15 || validHospital(a[15])) && (a.size()<=16 || validHospital(a[16])) && (a.size()<=17 || validHospital(a[17])) && (a.size()<=18 || validHospital(a[18])) && (a.size()<=19 || validHospital(a[19]));}
+  function valid_profile(d){return d.keys().hasOnly(['name', 'deleted', 'revision', 'updatedById', 'updatedAt', 'allergyStatus', 'allergies', 'conditions', 'birthYear', 'blood', 'emergencyName', 'emergencyPhone', 'hospitalFiles']) && careBase(d) && d.allergyStatus in ['unknown','none','known'] && str(d,'allergies',1000) && str(d,'conditions',1000) && str(d,'birthYear',4) && str(d,'blood',5) && str(d,'emergencyName',120) && str(d,'emergencyPhone',40) && validHospitals(d.get('hospitalFiles',[])) && (d.allergyStatus!='known' || d.allergies.size()>0);}
+  function valid_medications(d){return d.keys().hasOnly(['name', 'deleted', 'revision', 'updatedById', 'updatedAt', 'ingredient', 'dose', 'times', 'start', 'end', 'status', 'notes', 'minHours', 'maxPerDay']) && careBase(d) && str(d,'ingredient',200) && str(d,'dose',300) && d.dose.size()>0 && str(d,'notes',5000) && date(d,'start') && optionalDate(d,'end') && (d.end=='' || d.end>=d.start) && d.status in ['active','stopped'] && d.minHours is number && d.minHours>=0 && d.minHours<=168 && d.maxPerDay is int && d.maxPerDay>=0 && d.maxPerDay<=100 && d.times is list && d.times.size()>0 && d.times.size()<=12 && d.times.toSet().size()==d.times.size() && (d.times.size()<=0 || clock(d.times[0])) && (d.times.size()<=1 || clock(d.times[1])) && (d.times.size()<=2 || clock(d.times[2])) && (d.times.size()<=3 || clock(d.times[3])) && (d.times.size()<=4 || clock(d.times[4])) && (d.times.size()<=5 || clock(d.times[5])) && (d.times.size()<=6 || clock(d.times[6])) && (d.times.size()<=7 || clock(d.times[7])) && (d.times.size()<=8 || clock(d.times[8])) && (d.times.size()<=9 || clock(d.times[9])) && (d.times.size()<=10 || clock(d.times[10])) && (d.times.size()<=11 || clock(d.times[11]));}
+  function valid_appointments(d){return d.keys().hasOnly(['name', 'deleted', 'revision', 'updatedById', 'updatedAt', 'date', 'time', 'doctor', 'place', 'notes']) && careBase(d) && date(d,'date') && clock(d.time) && str(d,'doctor',200) && str(d,'place',300) && str(d,'notes',5000);}
+  function valid_tasks(d){return d.keys().hasOnly(['name', 'deleted', 'revision', 'updatedById', 'updatedAt', 'date', 'status', 'assignee', 'notes']) && careBase(d) && date(d,'date') && d.status in ['open','done'] && str(d,'assignee',120) && str(d,'notes',5000);}
+  function valid_reports(d){return d.keys().hasOnly(['name', 'deleted', 'revision', 'updatedById', 'updatedAt', 'date', 'notes']) && careBase(d) && date(d,'date') && str(d,'notes',5000);}
+  function valid_journal(d){return d.keys().hasOnly(['name', 'deleted', 'revision', 'updatedById', 'updatedAt', 'date', 'kind', 'notes']) && careBase(d) && date(d,'date') && d.kind in ['update','question','visit'] && str(d,'notes',5000);}
+
+  function validCareRecord(s,d){return (s=='profile' && valid_profile(d)) || (s=='medications' && valid_medications(d)) || (s=='appointments' && valid_appointments(d)) || (s=='tasks' && valid_tasks(d)) || (s=='reports' && valid_reports(d)) || (s=='journal' && valid_journal(d));}
+  match /carePatients/{pid}{
+   allow create: if careSigned() && request.resource.data.keys().hasOnly(['name','relation','timezone','basis','policyVersion','ownerId','deleting','createdAt']) && str(request.resource.data,'name',120) && request.resource.data.name.size()>0 && str(request.resource.data,'relation',120) && request.resource.data.timezone in ['Asia/Riyadh','Asia/Dubai','Africa/Cairo','Europe/London','Asia/Seoul'] && request.resource.data.basis in ['self','consent','guardian','representative'] && request.resource.data.policyVersion=='2026-10-14' && request.resource.data.ownerId==request.auth.uid && request.resource.data.deleting==false && request.resource.data.createdAt==request.time;
+   allow read: if careSigned() && (resource.data.ownerId==request.auth.uid || (!resource.data.deleting && careMember(pid)));
+   allow update: if careOwner(pid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleting']) && request.resource.data.deleting==true;
+   allow delete: if carePurge(pid);
+   match /{s}/{rid}{
+    allow read: if s in ['profile','medications','appointments','tasks','reports','journal'] && careRead(pid,s);
+    allow create: if s in ['profile','medications','appointments','tasks','reports','journal'] && careWrite(pid,s) && validCareRecord(s,request.resource.data) && request.resource.data.revision==1 && (s!='profile' || rid=='health') && careSnapshot(pid,s,rid,request.resource.data);
+    allow update: if s in ['profile','medications','appointments','tasks','reports','journal'] && careWrite(pid,s) && validCareRecord(s,request.resource.data) && request.resource.data.revision==resource.data.revision+1 && careSnapshot(pid,s,rid,request.resource.data);
+    allow delete: if s in ['profile','medications','appointments','tasks','reports','journal','doseEvents','doseGuards','audit'] && carePurge(pid);
    }
-   match /audit/{aid} {
-    allow read: if owner(pid);
-    allow create: if signed() && request.resource.data.actorId == request.auth.uid
-      && request.resource.data.section in ['medications','appointments','tasks','reports']
-      && editSection(pid,request.resource.data.section)
-      && request.resource.data.keys().hasOnly(['actorId','actor','section','action','at']);
-    allow update, delete: if false;
+   match /audit/{aid}{
+    allow read: if careOwner(pid);
+    allow create: if careSigned() && request.resource.data.keys().hasOnly(['section','recordId','revision','actorId','actor','at','snapshot']) && str(request.resource.data,'actor',200) && request.resource.data.actorId==request.auth.uid && request.resource.data.at==request.time && request.resource.data.section in ['profile','medications','appointments','tasks','reports','journal','doseEvents'] && auditLinked(request.resource.data);
+    function auditLinked(a){
+     let path=/databases/$(database)/documents/carePatients/$(pid)/$(a.section)/$(a.recordId);
+     let next=getAfter(path).data;
+     return careWrite(pid,a.section=='doseEvents'?'medications':a.section) && aid==a.section+'_'+a.recordId+'_'+string(a.revision) && next==a.snapshot && next.revision==a.revision && next.updatedAt==request.time && next.updatedById==request.auth.uid && ((!exists(path) && a.revision==1) || (exists(path) && a.revision==get(path).data.revision+1));
+    }
+   }
+   match /doseEvents/{eid}{
+    allow read: if careRead(pid,'medications');
+    function doseValid(d){return d.keys().hasOnly(['name','deleted','revision','updatedById','updatedAt','medId','day','time','status','reason','warningAcknowledged']) && careBase(d) && d.deleted==false && str(d,'medId',120) && date(d,'day') && clock(d.time) && str(d,'reason',500) && d.warningAcknowledged is bool;}
+    function medValid(d){let m=get(/databases/$(database)/documents/carePatients/$(pid)/medications/$(d.medId)).data;return m.status=='active' && !m.deleted && d.time in m.times && d.day>=m.start && (m.end=='' || d.day<=m.end) && d.name==m.name;}
+    function guardLinked(d){let g=getAfter(/databases/$(database)/documents/carePatients/$(pid)/doseGuards/$(d.medId)).data;return g.eventId==eid && g.lastGivenAt==request.time && g.day==d.day;}
+    allow create: if careWrite(pid,'medications') && doseValid(request.resource.data) && request.resource.data.revision==1 && request.resource.data.status in ['given','not-given'] && (request.resource.data.status!='not-given' || request.resource.data.reason.size()>0) && eid==request.resource.data.medId+'_'+request.resource.data.day+'_'+request.resource.data.time && medValid(request.resource.data) && (request.resource.data.status!='given' || guardLinked(request.resource.data)) && careSnapshot(pid,'doseEvents',eid,request.resource.data);
+    allow update: if careWrite(pid,'medications') && doseValid(request.resource.data) && resource.data.status in ['given','not-given'] && request.resource.data.status=='corrected' && request.resource.data.reason.size()>0 && request.resource.data.revision==resource.data.revision+1 && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','reason','revision','updatedById','updatedAt']) && careSnapshot(pid,'doseEvents',eid,request.resource.data);
+   }
+   match /doseGuards/{mid}{
+    allow read: if careRead(pid,'medications');
+    function validGuard(){
+     let d=request.resource.data;
+     let path=/databases/$(database)/documents/carePatients/$(pid)/doseEvents/$(d.eventId);
+     let event=getAfter(path).data;
+     let prior=/databases/$(database)/documents/carePatients/$(pid)/doseGuards/$(mid);
+     return d.keys().hasOnly(['day','count','lastGivenAt','eventId']) && date(d,'day') && d.count is int && d.count>0 && d.lastGivenAt==request.time && !exists(path) && event.medId==mid && event.status=='given' && event.day==d.day && event.updatedById==request.auth.uid && event.updatedAt==request.time && ((!exists(prior) && d.count==1) || (exists(prior) && ((get(prior).data.day==d.day && d.count==get(prior).data.count+1) || (get(prior).data.day!=d.day && d.count==1))));
+    }
+    allow create,update: if careWrite(pid,'medications') && validGuard();
    }
   }
-  match /memberships/{mid} {
-   function valid(d) {
-    return d.keys().hasOnly(['email','patientId','ownerId','patientName','status','readSections','editSections'])
-     && d.email is string && d.email == d.email.lower() && d.patientId is string
-     && mid == d.patientId + '_' + d.email
-     && d.readSections is list && d.editSections is list
-     && d.readSections.hasOnly(['medications','appointments','tasks','reports'])
-     && d.editSections.hasOnly(d.readSections)
-     && d.status in ['pending','active'];
+  match /careMemberships/{mid}{
+   function validCareGrant(d){return d.keys().hasOnly(['email','patientId','patientName','ownerId','status','memberUid','readSections','editSections']) && str(d,'email',254) && d.email==d.email.lower() && str(d,'patientId',120) && str(d,'patientName',120) && str(d,'memberUid',128) && mid==d.patientId+'_'+d.email && d.readSections is list && d.editSections is list && d.readSections.size()<=6 && d.editSections.size()<=5 && d.readSections.hasOnly(['profile','medications','appointments','tasks','reports','journal']) && d.editSections.hasOnly(['medications','appointments','tasks','reports','journal']) && d.editSections.hasOnly(d.readSections) && d.status in ['pending','active'];}
+   allow read: if careSigned() && (resource.data.email==request.auth.token.email.lower() || resource.data.ownerId==request.auth.uid);
+   allow create: if careSigned() && validCareGrant(request.resource.data) && careOwner(request.resource.data.patientId) && !careParent(request.resource.data.patientId).deleting && request.resource.data.ownerId==request.auth.uid && request.resource.data.patientName==careParent(request.resource.data.patientId).name && request.resource.data.status=='pending' && request.resource.data.memberUid=='';
+   allow update: if careSigned() && validCareGrant(request.resource.data) && !careParent(resource.data.patientId).deleting && request.resource.data.patientId==resource.data.patientId && request.resource.data.email==resource.data.email && request.resource.data.ownerId==resource.data.ownerId && request.resource.data.patientName==resource.data.patientName && ((careOwner(resource.data.patientId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readSections','editSections'])) || (resource.data.email==request.auth.token.email.lower() && resource.data.status=='pending' && request.resource.data.status=='active' && request.resource.data.memberUid==request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','memberUid'])));
+   allow delete: if careSigned() && (careOwner(resource.data.patientId) || resource.data.email==request.auth.token.email.lower());
+  }
+  function legacy_careSigned(){return request.auth != null && request.auth.token.email_verified == true;}
+  function legacy_careParent(pid){return get(/databases/$(database)/documents/patients/$(pid)).data;}
+  function legacy_careOwner(pid){return legacy_careSigned() && legacy_careParent(pid).ownerId == request.auth.uid;}
+  function legacy_careGrant(pid){return get(/databases/$(database)/documents/memberships/$(pid+'_'+request.auth.token.email.lower())).data;}
+  function legacy_careMember(pid){return legacy_careSigned() && legacy_careGrant(pid).status == 'active' && legacy_careGrant(pid).get('memberUid',request.auth.uid) == request.auth.uid;}
+  function legacy_careRead(pid,s){return legacy_careOwner(pid) || (!legacy_careParent(pid).get('deleting',false) && legacy_careMember(pid) && s in legacy_careGrant(pid).readSections);}
+  function legacy_careWrite(pid,s){return legacy_careSigned() && !legacy_careParent(pid).get('deleting',false) && (legacy_careOwner(pid) || (s != 'profile' && legacy_careMember(pid) && s in legacy_careGrant(pid).editSections));}
+  function legacy_carePurge(pid){return legacy_careOwner(pid) && legacy_careParent(pid).get('deleting',false);}
+  function legacy_str(d,k,n){return d[k] is string && d[k].size()<=n;}
+  function legacy_date(d,k){return legacy_str(d,k,10) && d[k].matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');}
+  function legacy_optionalDate(d,k){return d[k]=='' || legacy_date(d,k);}
+  function legacy_clock(t){return t is string && t.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$');}
+  function legacy_careBase(d){return d.name is string && d.name.size()>0 && d.name.size()<=200 && d.deleted is bool && d.revision is int && d.revision>0 && d.updatedById==request.auth.uid && d.updatedAt==request.time;}
+  function legacy_careSnapshot(pid,s,rid,d){
+    let a=getAfter(/databases/$(database)/documents/patients/$(pid)/audit/$(s+'_'+rid+'_'+string(d.revision))).data;
+    return a.snapshot==d && a.actorId==request.auth.uid && a.at==request.time && a.section==s && a.recordId==rid && a.revision==d.revision;
+  }
+  function legacy_validHospital(d){return d is map && d.keys().hasOnly(['hospital','number']) && legacy_str(d,'hospital',200) && d.hospital.size()>0 && legacy_str(d,'number',120) && d.number.size()>0;}
+  function legacy_validHospitals(a){return a is list && a.size()<=20 && (a.size()<=0 || legacy_validHospital(a[0])) && (a.size()<=1 || legacy_validHospital(a[1])) && (a.size()<=2 || legacy_validHospital(a[2])) && (a.size()<=3 || legacy_validHospital(a[3])) && (a.size()<=4 || legacy_validHospital(a[4])) && (a.size()<=5 || legacy_validHospital(a[5])) && (a.size()<=6 || legacy_validHospital(a[6])) && (a.size()<=7 || legacy_validHospital(a[7])) && (a.size()<=8 || legacy_validHospital(a[8])) && (a.size()<=9 || legacy_validHospital(a[9])) && (a.size()<=10 || legacy_validHospital(a[10])) && (a.size()<=11 || legacy_validHospital(a[11])) && (a.size()<=12 || legacy_validHospital(a[12])) && (a.size()<=13 || legacy_validHospital(a[13])) && (a.size()<=14 || legacy_validHospital(a[14])) && (a.size()<=15 || legacy_validHospital(a[15])) && (a.size()<=16 || legacy_validHospital(a[16])) && (a.size()<=17 || legacy_validHospital(a[17])) && (a.size()<=18 || legacy_validHospital(a[18])) && (a.size()<=19 || legacy_validHospital(a[19]));}
+  function legacy_valid_profile(d){return d.keys().hasOnly(['name', 'deleted', 'revision', 'updatedById', 'updatedAt', 'legacyRecord', 'allergyStatus', 'allergies', 'conditions', 'birthYear', 'blood', 'emergencyName', 'emergencyPhone', 'hospitalFiles']) && legacy_careBase(d) && d.allergyStatus in ['unknown','none','known'] && legacy_str(d,'allergies',1000) && legacy_str(d,'conditions',1000) && legacy_str(d,'birthYear',4) && legacy_str(d,'blood',5) && legacy_str(d,'emergencyName',120) && legacy_str(d,'emergencyPhone',40) && legacy_validHospitals(d.get('hospitalFiles',[])) && (d.allergyStatus!='known' || d.allergies.size()>0);}
+  function legacy_valid_medications(d){return d.keys().hasOnly(['name', 'deleted', 'revision', 'updatedById', 'updatedAt', 'legacyRecord', 'ingredient', 'dose', 'times', 'start', 'end', 'status', 'notes', 'minHours', 'maxPerDay']) && legacy_careBase(d) && legacy_str(d,'ingredient',200) && legacy_str(d,'dose',300) && d.dose.size()>0 && legacy_str(d,'notes',5000) && (legacy_date(d,'start') || (d.start=='' && 'legacyRecord' in d)) && legacy_optionalDate(d,'end') && (d.end=='' || d.end>=d.start) && d.status in ['active','stopped'] && d.minHours is number && d.minHours>=0 && d.minHours<=168 && d.maxPerDay is int && d.maxPerDay>=0 && d.maxPerDay<=100 && d.times is list && d.times.size()>0 && d.times.size()<=12 && d.times.toSet().size()==d.times.size() && (d.times.size()<=0 || legacy_clock(d.times[0])) && (d.times.size()<=1 || legacy_clock(d.times[1])) && (d.times.size()<=2 || legacy_clock(d.times[2])) && (d.times.size()<=3 || legacy_clock(d.times[3])) && (d.times.size()<=4 || legacy_clock(d.times[4])) && (d.times.size()<=5 || legacy_clock(d.times[5])) && (d.times.size()<=6 || legacy_clock(d.times[6])) && (d.times.size()<=7 || legacy_clock(d.times[7])) && (d.times.size()<=8 || legacy_clock(d.times[8])) && (d.times.size()<=9 || legacy_clock(d.times[9])) && (d.times.size()<=10 || legacy_clock(d.times[10])) && (d.times.size()<=11 || legacy_clock(d.times[11]));}
+  function legacy_valid_appointments(d){return d.keys().hasOnly(['name', 'deleted', 'revision', 'updatedById', 'updatedAt', 'legacyRecord', 'date', 'time', 'doctor', 'place', 'notes']) && legacy_careBase(d) && legacy_date(d,'date') && legacy_clock(d.time) && legacy_str(d,'doctor',200) && legacy_str(d,'place',300) && legacy_str(d,'notes',5000);}
+  function legacy_valid_tasks(d){return d.keys().hasOnly(['name', 'deleted', 'revision', 'updatedById', 'updatedAt', 'legacyRecord', 'date', 'status', 'assignee', 'notes']) && legacy_careBase(d) && legacy_date(d,'date') && d.status in ['open','done'] && legacy_str(d,'assignee',120) && legacy_str(d,'notes',5000);}
+  function legacy_valid_reports(d){return d.keys().hasOnly(['name', 'deleted', 'revision', 'updatedById', 'updatedAt', 'legacyRecord', 'date', 'notes']) && legacy_careBase(d) && legacy_date(d,'date') && legacy_str(d,'notes',5000);}
+  function legacy_valid_journal(d){return d.keys().hasOnly(['name', 'deleted', 'revision', 'updatedById', 'updatedAt', 'legacyRecord', 'date', 'kind', 'notes']) && legacy_careBase(d) && legacy_date(d,'date') && d.kind in ['update','question','visit'] && legacy_str(d,'notes',5000);}
+
+  function legacy_validCareRecord(s,d){return (s=='profile' && legacy_valid_profile(d)) || (s=='medications' && legacy_valid_medications(d)) || (s=='appointments' && legacy_valid_appointments(d)) || (s=='tasks' && legacy_valid_tasks(d)) || (s=='reports' && legacy_valid_reports(d)) || (s=='journal' && legacy_valid_journal(d));}
+  match /patients/{pid}{
+   allow create: if legacy_careSigned() && request.resource.data.keys().hasOnly(['name','relation','timezone','basis','policyVersion','ownerId','deleting','createdAt']) && legacy_str(request.resource.data,'name',120) && request.resource.data.name.size()>0 && legacy_str(request.resource.data,'relation',120) && request.resource.data.timezone in ['Asia/Riyadh','Asia/Dubai','Africa/Cairo','Europe/London','Asia/Seoul'] && request.resource.data.basis in ['self','consent','guardian','representative'] && request.resource.data.policyVersion=='2026-10-14' && request.resource.data.ownerId==request.auth.uid && request.resource.data.get('deleting',false)==false && request.resource.data.createdAt==request.time;
+   allow read: if legacy_careSigned() && (resource.data.ownerId==request.auth.uid || (!resource.data.get('deleting',false) && legacy_careMember(pid)));
+   allow update: if legacy_careOwner(pid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleting']) && request.resource.data.get('deleting',false)==true;
+   allow delete: if legacy_carePurge(pid);
+   match /{s}/{rid}{
+    allow read: if s in ['profile','medications','appointments','tasks','reports','journal'] && legacy_careRead(pid,s);
+    allow create: if s in ['profile','medications','appointments','tasks','reports','journal'] && legacy_careWrite(pid,s) && legacy_validCareRecord(s,request.resource.data) && !('legacyRecord' in request.resource.data) && request.resource.data.revision==1 && (s!='profile' || rid=='health') && legacy_careSnapshot(pid,s,rid,request.resource.data);
+    allow update: if s in ['profile','medications','appointments','tasks','reports','journal'] && legacy_careWrite(pid,s) && legacy_validCareRecord(s,request.resource.data) && ((!('revision' in resource.data) && request.resource.data.get('legacyRecord',{})==resource.data) || ('revision' in resource.data && request.resource.data.get('legacyRecord',{})==resource.data.get('legacyRecord',{}))) && request.resource.data.revision==resource.data.get('revision',0)+1 && legacy_careSnapshot(pid,s,rid,request.resource.data);
+    allow delete: if s in ['profile','medications','appointments','tasks','reports','journal','doseEvents','doseGuards','audit'] && legacy_carePurge(pid);
    }
-   allow read: if signed() && (resource.data.email == request.auth.token.email.lower() || resource.data.ownerId == request.auth.uid);
-   allow create: if signed() && owner(request.resource.data.patientId)
-     && request.resource.data.ownerId == request.auth.uid && request.resource.data.status == 'pending' && valid(request.resource.data);
-   allow update: if signed() && valid(request.resource.data)
-     && request.resource.data.patientId == resource.data.patientId
-     && request.resource.data.ownerId == resource.data.ownerId
-     && request.resource.data.email == resource.data.email
-     && ((owner(resource.data.patientId) && request.resource.data.status == 'pending')
-      || (resource.data.email == request.auth.token.email.lower() && resource.data.status == 'pending'
-       && request.resource.data.status == 'active' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])));
-   allow delete: if signed() && owner(resource.data.patientId);
+   match /audit/{aid}{
+    allow read: if legacy_careOwner(pid);
+    allow create: if legacy_careSigned() && request.resource.data.keys().hasOnly(['section','recordId','revision','actorId','actor','at','snapshot']) && legacy_str(request.resource.data,'actor',200) && request.resource.data.actorId==request.auth.uid && request.resource.data.at==request.time && request.resource.data.section in ['profile','medications','appointments','tasks','reports','journal','doseEvents'] && legacy_auditLinked(request.resource.data);
+    function legacy_auditLinked(a){
+     let path=/databases/$(database)/documents/patients/$(pid)/$(a.section)/$(a.recordId);
+     let next=getAfter(path).data;
+     return legacy_careWrite(pid,a.section=='doseEvents'?'medications':a.section) && aid==a.section+'_'+a.recordId+'_'+string(a.revision) && next==a.snapshot && next.revision==a.revision && next.updatedAt==request.time && next.updatedById==request.auth.uid && ((!exists(path) && a.revision==1) || (exists(path) && a.revision==get(path).data.get('revision',0)+1));
+    }
+   }
+   match /doseEvents/{eid}{
+    allow read: if legacy_careRead(pid,'medications');
+    function legacy_doseValid(d){return d.keys().hasOnly(['name','deleted','revision','updatedById','updatedAt','medId','day','time','status','reason','warningAcknowledged']) && legacy_careBase(d) && d.deleted==false && legacy_str(d,'medId',120) && legacy_date(d,'day') && legacy_clock(d.time) && legacy_str(d,'reason',500) && d.warningAcknowledged is bool;}
+    function legacy_medValid(d){let m=get(/databases/$(database)/documents/patients/$(pid)/medications/$(d.medId)).data;let original=m.get('legacyRecord',m);return m.get('status','active')=='active' && !m.get('deleted',false) && d.time in m.get('times',[m.get('time','')]) && d.day>=m.get('start','') && (m.get('end','')=='' || d.day<=m.end) && d.name==m.name && !(d.day in original.get('takenDates',[]) && d.time==original.get('time',''));}
+    function legacy_guardLinked(d){let g=getAfter(/databases/$(database)/documents/patients/$(pid)/doseGuards/$(d.medId)).data;return g.eventId==eid && g.lastGivenAt==request.time && g.day==d.day;}
+    allow create: if legacy_careWrite(pid,'medications') && legacy_doseValid(request.resource.data) && request.resource.data.revision==1 && request.resource.data.status in ['given','not-given'] && (request.resource.data.status!='not-given' || request.resource.data.reason.size()>0) && eid==request.resource.data.medId+'_'+request.resource.data.day+'_'+request.resource.data.time && legacy_medValid(request.resource.data) && (request.resource.data.status!='given' || legacy_guardLinked(request.resource.data)) && legacy_careSnapshot(pid,'doseEvents',eid,request.resource.data);
+    allow update: if legacy_careWrite(pid,'medications') && legacy_doseValid(request.resource.data) && resource.data.status in ['given','not-given'] && request.resource.data.status=='corrected' && request.resource.data.reason.size()>0 && request.resource.data.revision==resource.data.get('revision',0)+1 && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','reason','revision','updatedById','updatedAt']) && legacy_careSnapshot(pid,'doseEvents',eid,request.resource.data);
+   }
+   match /doseGuards/{mid}{
+    allow read: if legacy_careRead(pid,'medications');
+    function legacy_validGuard(){
+     let d=request.resource.data;
+     let path=/databases/$(database)/documents/patients/$(pid)/doseEvents/$(d.eventId);
+     let event=getAfter(path).data;
+     let prior=/databases/$(database)/documents/patients/$(pid)/doseGuards/$(mid);
+     return d.keys().hasOnly(['day','count','lastGivenAt','eventId']) && legacy_date(d,'day') && d.count is int && d.count>0 && d.lastGivenAt==request.time && !exists(path) && event.medId==mid && event.status=='given' && event.day==d.day && event.updatedById==request.auth.uid && event.updatedAt==request.time && ((!exists(prior) && d.count==1) || (exists(prior) && ((get(prior).data.day==d.day && d.count==get(prior).data.count+1) || (get(prior).data.day!=d.day && d.count==1))));
+    }
+    allow create,update: if legacy_careWrite(pid,'medications') && legacy_validGuard();
+   }
+  }
+  match /memberships/{mid}{
+   function legacy_validCareGrant(d){return d.keys().hasOnly(['email','patientId','patientName','ownerId','status','memberUid','readSections','editSections']) && legacy_str(d,'email',254) && d.email==d.email.lower() && legacy_str(d,'patientId',120) && legacy_str(d,'patientName',120) && d.get('memberUid','') is string && d.get('memberUid','').size()<=128 && mid==d.patientId+'_'+d.email && d.readSections is list && d.editSections is list && d.readSections.size()<=6 && d.editSections.size()<=5 && d.readSections.hasOnly(['profile','medications','appointments','tasks','reports','journal']) && d.editSections.hasOnly(['medications','appointments','tasks','reports','journal']) && d.editSections.hasOnly(d.readSections) && d.status in ['pending','active'];}
+   allow read: if legacy_careSigned() && (resource.data.email==request.auth.token.email.lower() || resource.data.ownerId==request.auth.uid);
+   allow create: if legacy_careSigned() && legacy_validCareGrant(request.resource.data) && legacy_careOwner(request.resource.data.patientId) && !legacy_careParent(request.resource.data.patientId).get('deleting',false) && request.resource.data.ownerId==request.auth.uid && request.resource.data.patientName==legacy_careParent(request.resource.data.patientId).name && request.resource.data.status=='pending' && request.resource.data.get('memberUid','')=='';
+   allow update: if legacy_careSigned() && legacy_validCareGrant(request.resource.data) && !legacy_careParent(resource.data.patientId).get('deleting',false) && request.resource.data.patientId==resource.data.patientId && request.resource.data.email==resource.data.email && request.resource.data.ownerId==resource.data.ownerId && request.resource.data.patientName==resource.data.patientName && ((legacy_careOwner(resource.data.patientId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readSections','editSections'])) || (resource.data.email==request.auth.token.email.lower() && resource.data.status=='pending' && request.resource.data.status=='active' && request.resource.data.get('memberUid',request.auth.uid)==request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','memberUid'])));
+   allow delete: if legacy_careSigned() && (legacy_careOwner(resource.data.patientId) || resource.data.email==request.auth.token.email.lower());
   }
  }
 }

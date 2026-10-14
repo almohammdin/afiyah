@@ -24,21 +24,19 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run check && npm test
-      - run: node --check v2/app.js && node --check v2/data.js && node --test v2/tests/*.test.js
+      - run: node --check dashboard.js && node --check domain.js
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
       - run: npm install --no-save --ignore-scripts firebase@11.10.0 @firebase/rules-unit-testing@4.0.1 firebase-tools@14.22.0
       - name: Verify access rules and concurrent dose recording
-        run: npx firebase emulators:exec --only firestore --project demo-afiyah-v2 --config firebase.v2-test.json 'node --test v2/tests/rules.test.mjs'
+        run: npx firebase emulators:exec --only firestore --project demo-afiyah --config firebase.test.json 'node --test tests/rules.test.mjs'
       - name: Prepare public files
         run: |
           mkdir -p public
-          cp index.html style.css app.js data.js config.js manifest.webmanifest public/
+          cp index.html style.css base.css app.js data.js dashboard.js domain.js footer.js config.js manifest.webmanifest public/
           cp -R assets public/
-          mkdir -p public/v2
-          cp v2/*.html v2/*.js v2/*.css public/v2/
           touch public/.nojekyll
       - uses: actions/configure-pages@v5
         with:

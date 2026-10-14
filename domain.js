@@ -16,6 +16,7 @@ export function validate(s,d){
  if(!d.name?.trim())throw Error('أدخل الاسم أو العنوان');
  for(const k of ['date','start','end'])if(d[k]&&!validDate(d[k]))throw Error('التاريخ غير صحيح، استخدم YYYY-MM-DD');
  if(s==='medications'){if(!d.dose.trim())throw Error('أدخل الجرعة كما وردت في الوصفة');times(d.times.join(','));if(d.end&&d.end<d.start)throw Error('النهاية تسبق البداية');if(!Number.isFinite(d.minHours)||d.minHours<0||d.minHours>168||!Number.isInteger(d.maxPerDay)||d.maxPerDay<0||d.maxPerDay>100)throw Error('تحقق من حدود الوصفة');}
+ if(s==='profile'&&d.hospitalFiles!==undefined){if(!Array.isArray(d.hospitalFiles)||d.hospitalFiles.length>20||d.hospitalFiles.some(x=>typeof x.hospital!=='string'||!x.hospital.trim()||x.hospital.length>200||typeof x.number!=='string'||!x.number.trim()||x.number.length>120))throw Error('تحقق من الملفات الطبية، الحد الأقصى 20 مستشفى');}
  return d;
 }
 export const errorMessage=e=>({'permission-denied':'تعذر الوصول إلى هذا الملف، تحقق من صلاحيات المشاركة','unavailable':'تعذر الاتصال، حاول مرة أخرى','auth/popup-blocked':'اسمح بفتح نافذة تسجيل الدخول في المتصفح','auth/popup-closed-by-user':'لم يكتمل تسجيل الدخول','auth/unauthorized-domain':'تعذر تسجيل الدخول من هذا الرابط'}[e.code]||(e.code||!/[\u0600-\u06ff]/.test(e.message||'')?'تعذر إكمال العملية، حاول مجددًا':e.message)||'تعذر إكمال العملية');
