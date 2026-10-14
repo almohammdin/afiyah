@@ -62,3 +62,5 @@ body:has(.main-nav){padding-bottom:0}
 @media(min-width:851px){.main-nav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}.main-nav button{padding-inline:6px}.main-nav button>span{white-space:normal}}
 
 .approved-logo{display:block;position:relative;width:130px;height:40px;overflow:hidden;flex-shrink:0}.brand .approved-logo img{position:absolute;width:171px;height:85.5px;max-width:none;left:-21px;top:-24px}
+
+.main-nav button>span{font-family:"Thmanyah Sans",Tahoma,sans-serif;font-feature-settings:"salt" 1;font-weight:500}
