@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as D from '../data.js';
-import {config} from '../config.js';
+import {config} from '../config.js?v=20261014-auth2';
 test('patient isolation, section permissions, record updates, and revocation in demo',async()=>{
  D.startDemo();const first=(await D.patients())[0];
  const second=await D.addPatient({name:'اختبار',relation:'',birthYear:'',blood:''});

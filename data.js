@@ -1,4 +1,4 @@
-import {config} from './config.js';
+import {config} from './config.js?v=20261014-auth2';
 export const sections=['medications','appointments','tasks','reports'];
 export const labels={medications:'الأدوية',appointments:'المواعيد',tasks:'المهام',reports:'التقارير'};
 let api,auth,db;let demo=false;let memory;let user;
