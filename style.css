@@ -109,3 +109,25 @@ header.top .actions{margin:0;gap:8px}
  .footer-social-cluster{flex-wrap:wrap;justify-content:center}.social-username{font-size:.6875rem}
 }
 @media print{#app{display:block;min-height:0}.footer-wrap{display:none}.wrap,body:has(.main-nav) .wrap{max-width:none;padding:0}}
+
+/* Compact footer: dedication, signature and centered release */
+.footer-wrap .creator-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 24px;padding:12px 0 8px}
+.footer-wrap .footer-dedication{font-size:12px;line-height:1.6;min-width:0;text-align:right}
+.footer-wrap .footer-dedication p{font-size:inherit;font-weight:500}
+.footer-wrap .footer-creator{display:flex;flex-wrap:nowrap;align-items:center;justify-content:flex-end;gap:12px;width:auto}
+.footer-wrap .creator-signature{font-size:11px;gap:5px;flex-shrink:0;min-height:32px}
+.footer-wrap .creator-signature img{width:33px;height:auto}
+.footer-wrap .footer-social-cluster{gap:4px;padding:0;border:0;border-radius:0;background:transparent;flex-wrap:nowrap}
+.footer-wrap .social-username{font-size:11px;font-weight:400;padding:0}
+.footer-wrap .social-links{gap:0}
+.footer-wrap .social-links a{width:32px;height:32px}
+.footer-wrap .social-links svg{width:16px;height:16px}
+.footer-wrap .app-version{grid-column:1/-1;justify-self:center;text-align:center;font-size:10px;line-height:1.4;color:#bccbd7;margin:0}
+@media(pointer:coarse){.footer-wrap .social-links a{width:44px;height:44px}.footer-wrap .creator-signature{min-height:44px}}
+@media(max-width:760px){
+ .footer-wrap .creator-footer{grid-template-columns:minmax(0,1fr);gap:6px;padding:10px 0 8px}
+ .footer-wrap .footer-creator{justify-content:space-between;gap:8px;min-width:0}
+ .footer-wrap .footer-social-cluster{flex-wrap:wrap;justify-content:flex-end;gap:0 4px;min-width:0}
+ .footer-wrap .footer-dedication{font-size:12px}
+ .footer-wrap .app-version{grid-column:1;text-align:center}
+}
