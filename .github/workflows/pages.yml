@@ -38,6 +38,7 @@ jobs:
           cp index.html style.css base.css app.js data.js example-patient.js dashboard.js domain.js care-time.js date-display.js footer.js config.js manifest.webmanifest public/
           cp -R assets public/
           touch public/.nojekyll
+          node scripts/stamp-release.mjs public/footer.js
           node scripts/verify-public.mjs public
       - uses: actions/configure-pages@v5
         with:
