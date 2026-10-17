@@ -1,4 +1,5 @@
 import { api, execute, selectActor, user, requestId } from "./adapter.js";
+import { LiveVoice } from "./live.js";
 import { VoiceSession } from "./voice.js";
 import { plan } from "./policy.js";
 import { day } from "../domain.js";
@@ -13,7 +14,7 @@ const esc = (x) =>
 const host = document.createElement("section");
 host.id = "care-agent";
 host.setAttribute("aria-label", "مساعد عافية");
-host.innerHTML = `<div class="agent-top"><div><span class="agent-eyebrow">معاينة ببيانات افتراضية فقط</span><h2>معك في تفاصيل العناية</h2><div id="agent-person"></div></div><button id="agent-expand" aria-label="تصغير أو توسيع المساعد">↗</button></div><div class="agent-body"><div class="agent-voice"><button id="agent-mic" aria-label="بدء تجربة الميكروفون"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></button><div><strong id="voice-state" role="status">جاهز للكتابة</strong><div id="voice-wave" aria-hidden="true">${"<i></i>".repeat(16)}</div><small id="voice-description">لا يبدأ الاستماع إلا باختيارك</small></div></div><div class="voice-controls"><button id="voice-mute">كتم</button><button id="voice-interrupt">مقاطعة</button><button id="voice-stop">إنهاء الصوت</button><button id="voice-read">قراءة آخر رد</button></div><p class="agent-limit">التنفيذ النصي يعمل على سجلات الاختبار · الميكروفون محلي، فهم الصوت وصوت المزوّد ينتظران الاعتماد · قد يتوقف الصوت عند قفل الهاتف</p><div id="agent-results" aria-live="polite"></div><form id="agent-form"><label for="agent-input" class="sr-only">اكتب لمساعد عافية</label><input id="agent-input" maxlength="4000" autocomplete="off" placeholder="مثلاً: ملخص اليوم، أضف ملاحظة شعرت بتحسن"><button>إرسال</button><button type="button" id="agent-attach" aria-label="إرفاق مستند اختبار">إرفاق</button></form><div class="agent-shortcuts"><button data-command="ملخص اليوم">ملخص اليوم</button><button data-command="أدويتي">الأدوية</button><button data-command="تقاريري">التقارير</button><button data-command="جهز ملخص الزيارة">ملخص الزيارة</button><button id="agent-new-appointment">موعد</button><button id="agent-new-task">مهمة</button><button id="agent-notifications">التنبيهات</button></div><details class="agent-lab"><summary>حسابات التجربة والصوت</summary><label>المستخدم الحالي <select id="agent-actor"><option value="sarah">سارة — مريضة</option><option value="ahmed">أحمد — مرافق لسارة وصاحب ملف عمر</option><option value="reader">ريم — اطلاع فقط</option></select></label><label>أصوات الجهاز المحلية <select id="device-voice"></select></label><button id="voice-sample">اختبار نطق افتراضي</button><p>هذه أصوات الجهاز وليست عينة صوت سعودي معتمدة للمزوّد</p></details></div>`;
+host.innerHTML = `<div class="agent-top"><div><span class="agent-eyebrow">معاينة ببيانات افتراضية فقط</span><h2>معك في تفاصيل العناية</h2><div id="agent-person"></div></div><button id="agent-expand" aria-label="تصغير أو توسيع المساعد">↗</button></div><div class="agent-body"><div class="agent-voice"><button id="agent-mic" aria-label="تحدث مع عافية"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></button><div><strong id="voice-state" role="status">تحدث مع عافية</strong><div id="voice-wave" aria-hidden="true">${"<i></i>".repeat(16)}</div><small id="voice-description">لا يبدأ الاستماع إلا باختيارك</small></div></div><details id="agent-options"><summary>الكتابة والمرفقات وخيارات المحادثة</summary><div class="voice-controls"><button id="voice-mute">كتم</button><button id="voice-interrupt">مقاطعة</button><button id="voice-stop">إنهاء الصوت</button><button id="voice-read">قراءة آخر رد</button></div><p class="agent-limit">التنفيذ النصي يعمل على سجلات الاختبار · الميكروفون محلي، فهم الصوت وصوت المزوّد ينتظران الاعتماد · قد يتوقف الصوت عند قفل الهاتف</p><div id="agent-results" aria-live="polite"></div><form id="agent-form"><label for="agent-input" class="sr-only">اكتب لمساعد عافية</label><input id="agent-input" maxlength="4000" autocomplete="off" placeholder="مثلاً: ملخص اليوم، أضف ملاحظة شعرت بتحسن"><button>إرسال</button><button type="button" id="agent-camera" hidden>تشغيل الكاميرا</button><button type="button" id="agent-attach" aria-label="إرفاق مستند اختبار">إرفاق</button></form><div class="agent-shortcuts"><button data-command="ملخص اليوم">ملخص اليوم</button><button data-command="أدويتي">الأدوية</button><button data-command="تقاريري">التقارير</button><button data-command="جهز ملخص الزيارة">ملخص الزيارة</button><button id="agent-new-appointment">موعد</button><button id="agent-new-task">مهمة</button><button id="agent-notifications">التنبيهات</button></div><details class="agent-lab"><summary>حسابات التجربة والصوت</summary><label>المستخدم الحالي <select id="agent-actor"><option value="sarah">سارة — مريضة</option><option value="ahmed">أحمد — مرافق لسارة وصاحب ملف عمر</option><option value="reader">ريم — اطلاع فقط</option></select></label><label>أصوات الجهاز المحلية <select id="device-voice"></select></label><button id="voice-sample">اختبار نطق افتراضي</button><p>هذه أصوات الجهاز وليست عينة صوت سعودي معتمدة للمزوّد</p></details></details></div>`;
 const mini = document.createElement("div");
 mini.className = "agent-mini";
 mini.innerHTML =
@@ -42,30 +43,50 @@ let patient = null,
   loading = false,
   currentTab = "today";
 const stateLabels = {
-  idle: "جاهز للكتابة",
+  connecting: "أتصل بمساعد عافية",
+  idle: "تحدث مع عافية",
   permission: "بانتظار إذن الميكروفون",
-  listening: "الميكروفون يستمع محلياً",
+  listening: "أسمعك الآن",
   processing: "جار تنفيذ الطلب",
   speaking: "المساعد يتحدث",
   muted: "الميكروفون مكتوم",
   failed: "تعذر الصوت، يمكنك الكتابة",
 };
-const voice = new VoiceSession({
+const voiceCallbacks = {
   onState: (s) => {
     $("#voice-state").textContent = stateLabels[s];
     host.querySelector(".mini-state").textContent = stateLabels[s];
     host.dataset.voice = s;
     $("#voice-description").textContent =
       s === "speaking"
-        ? "موجة خروج توضيحية لصوت الجهاز"
+        ? "صوت مساعد عافية"
         : s === "listening"
-          ? "موجة فعلية للصوت الداخل، لا يُرسل إلى مزوّد"
+          ? "موجة الصوت الداخل"
           : "يمكنك متابعة الكتابة";
   },
   onLevel: (l) =>
     host.style.setProperty("--voice-level", String(Math.max(0.08, l))),
+};
+const localVoice = new VoiceSession(voiceCallbacks);
+let voice = localVoice;
+const live = new LiveVoice({...voiceCallbacks,
+ getToken: undefined,
+ onText: (role,text)=>{ $("#voice-description").textContent=text; },
+ onTool: async(name,args)=>{
+  if(name==='open_input'){
+   $("#agent-options").open=true;
+   forcedExpand=true;manualFloat=false;floating();
+   if(args.mode==='attachment')$("#agent-attach").click();
+   else if(args.mode==='camera'){card('اضغط تشغيل الكاميرا عندما تكون جاهزا، لا تصور مستندات صحية حقيقية في المعاينة');$("#agent-camera").hidden=false;}
+   else $("#agent-input").focus();
+   return {ok:true,message:'فتحت خيارات الإدخال، لم يتم رفع أو حفظ ملف'};
+  }
+  if(name==='care_request')return await send(String(args.text||''))||{ok:false,message:'لم يتأكد التنفيذ'};
+  return {ok:false,message:'أداة غير مسموحة'};
+ }
 });
 function card(text, cls = "") {
+  $("#agent-options").open=true;
   const d = document.createElement("article");
   d.className = "agent-card " + cls;
   d.textContent = text;
@@ -117,7 +138,7 @@ async function context(ev) {
   const p = ev.detail.patient;
   if (p?.id !== patient?.id) {
     contextVersion++;
-    voice.interrupt();
+    voice.stop();
     pending = null;
     lastReply = "";
     lastRequest = null;
@@ -159,7 +180,7 @@ $("#agent-actor").onchange = async (ev) => {
   await selectActor(ev.target.value);
 };
 async function perform(tool, args = {}, reuse = null) {
-  if (!patient || loading) return;
+  if (!patient || loading) return {ok:false,message:"حدد المريض وانتظر اكتمال العملية الحالية"};
   const pid = patient.id,
     version = contextVersion;
   const request = reuse || {
@@ -173,7 +194,7 @@ async function perform(tool, args = {}, reuse = null) {
   voice.set("processing");
   try {
     const result = await api("tool", request);
-    if (version !== contextVersion) return;
+    if (version !== contextVersion) return {ok:false,message:"تغير الملف، تجاهل النتيجة السابقة"};
     show(result);
     lastRequest = null;
     if (result.kind === "navigate")
@@ -182,12 +203,13 @@ async function perform(tool, args = {}, reuse = null) {
       );
     if (["saved", "duplicate"].includes(result.kind)) {
       const snap = await api("snapshot?patient=" + pid);
-      if (version !== contextVersion) return;
+      if (version !== contextVersion) return {ok:false,message:"تغير الملف، تجاهل النتيجة السابقة"};
       entries = snap.entries;
       document.dispatchEvent(new Event("afiyah:refresh"));
     }
+    return {ok:true,...result};
   } catch (e) {
-    if (version !== contextVersion) return;
+    if (version !== contextVersion) return {ok:false,message:"تغير الملف، تجاهل النتيجة السابقة"};
     const rejected = e.status >= 400 && e.status < 500;
     const d = card(
       (rejected ? "لم تُحفظ العملية: " : "لم أتلق تأكيد الحفظ: ") + e.message,
@@ -197,6 +219,7 @@ async function perform(tool, args = {}, reuse = null) {
       button(d, "إعادة المحاولة بنفس الطلب", () =>
         perform(tool, args, request),
       );
+    return {ok:false,message:e.message};
   } finally {
     loading = false;
     if (voice.state === "processing") voice.interrupt();
@@ -298,11 +321,11 @@ function show(r) {
   }
 }
 async function send(text) {
-  if (!patient || loading) return;
+  if (!patient || loading) return {ok:false,message:"حدد المريض وانتظر اكتمال العملية الحالية"};
   card(text, "user");
   const version = contextVersion;
   const { safety } = await api("safety", { text, country: currentCountry() });
-  if (version !== contextVersion) return;
+  if (version !== contextVersion) return {ok:false,message:"تغير الملف، تجاهل النتيجة السابقة"};
   if (safety) {
     card(
       [safety.message, safety.question, safety.advice, safety.disclaimer]
@@ -314,13 +337,13 @@ async function send(text) {
       emergency.open = true;
       emergency.scrollIntoView({ block: "center" });
     }
-    return;
+    return {ok:false,safety};
   }
   const result = plan(text, { patient, entries, pending });
   pending = result.pending || null;
-  if (result.question) card(result.question);
-  else if (result.form) editForm(result.form);
-  else await perform(result.tool, result.args);
+  if (result.question) {card(result.question);return {ok:false,question:result.question};}
+  else if (result.form) {editForm(result.form);return {ok:true,message:"فتحت النموذج للمراجعة، لم يحفظ بعد"};}
+  else return await perform(result.tool, result.args);
 }
 $("#agent-form").onsubmit = (ev) => {
   ev.preventDefault();
@@ -344,7 +367,16 @@ host
               : b.dataset.command,
         )),
   );
-$("#agent-mic").onclick = () => voice.start();
+$("#agent-mic").onclick = async () => {
+ if(live.active){live.interrupt();return;}
+ if(!patient){card('اختر المريض أولا');return;}
+ // Host supplies a vetted short-lived token function; never accept a raw API key.
+ live.getToken=globalThis.AfiyahPreviewGetLiveToken;
+ if(!live.getToken){card('رابط المعاينة لم يعتمد بعد في خدمة الصوت، الاتصال غير متاح حاليا');return;}
+ if(!confirm(`ستبدأ محادثة صوتية خارجية لملف ${patient.name} الافتراضي. استخدم بيانات الاختبار فقط، ويسمح بقراءة هذا الملف بصوت مسموع؟`))return;
+ localVoice.stop();voice=live;
+ try{await live.start()}catch(e){card(e.message,'error')}
+};
 $("#voice-mute").onclick = () => voice.mute();
 $("#voice-interrupt").onclick = () => voice.interrupt();
 $("#voice-stop").onclick = () => voice.stop();
@@ -370,10 +402,10 @@ $("#voice-read").onclick = () => {
     lastReply &&
     confirm(`هل تريد قراءة رد ملف ${patient.name} بصوت مسموع الآن؟`)
   )
-    voice.speak(lastReply, voices[$("#device-voice").value]);
+    localVoice.speak(lastReply, voices[$("#device-voice").value]);
 };
 $("#voice-sample").onclick = () =>
-  voice.speak(
+  localVoice.speak(
     "أنا مساعد عافية. هذا اختبار نطق فقط. باراسيتامول، خمسمئة مليغرام. الساعة الثامنة والنصف صباحاً. لا يوجد تسجيل للجرعة",
     voices[$("#device-voice").value],
   );
@@ -476,3 +508,14 @@ addEventListener("pagehide", () => voice.stop());
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) voice.interrupt();
 });
+
+$("#agent-camera").onclick=async()=>{
+ const d=document.createElement('dialog');d.className='agent-dialog';
+ const video=document.createElement('video');video.autoplay=true;video.muted=true;video.playsInline=true;video.style.width='100%';
+ const close=document.createElement('button');close.textContent='إغلاق الكاميرا';d.append(video,close);document.body.append(d);d.showModal();
+ let stream;const pid=patient?.id;
+ const changed=()=>{if(patient?.id!==pid)d.close()};document.addEventListener('afiyah:context',changed);
+ d.onclose=()=>{stream?.getTracks().forEach(t=>t.stop());document.removeEventListener('afiyah:context',changed);d.remove()};close.onclick=()=>d.close();
+ try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});if(!d.open||patient?.id!==pid){stream.getTracks().forEach(t=>t.stop());d.close();return;}video.srcObject=stream;}
+ catch{d.close();card('تعذر تشغيل الكاميرا، يمكنك إرفاق ملف اختبار')}
+};

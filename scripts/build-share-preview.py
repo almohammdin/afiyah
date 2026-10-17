@@ -10,7 +10,7 @@ for p in root.glob('*.js'):
   s+='\ndocument.addEventListener("afiyah:refresh",()=>refresh());document.addEventListener("afiyah:navigate",ev=>{tab=ev.detail;render()});document.addEventListener("afiyah:context-request",()=>document.dispatchEvent(new CustomEvent("afiyah:context",{detail:{patient:p,tab}})));new MutationObserver(()=>document.dispatchEvent(new CustomEvent("afiyah:context",{detail:{patient:p,tab}}))).observe(document.getElementById("app"),{childList:true});'
  if p.name=='visit-report-ui.js':s=s.replace("new URL('./", "new URL('../../")
  (out/p.name).write_text(s)
-for name in ['agent.js','adapter.js','core.js','voice.js','policy.js']:
+for name in ['agent.js','adapter.js','core.js','voice.js','policy.js','live.js']:
  s=(root/'preview'/name).read_text()
  if name=='core.js':
   s=s.replace('import { randomUUID, createHash } from "node:crypto";','const randomUUID=()=>crypto.randomUUID?.()||Array.from(crypto.getRandomValues(new Uint8Array(24)),b=>b.toString(16).padStart(2,"0")).join(""); const createHash=()=>({update(value){return {digest(){return value}}}});')

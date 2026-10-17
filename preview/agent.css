@@ -334,3 +334,16 @@
 #care-agent.is-floating {
   bottom: 70px;
 }
+
+/* Voice is the main entry point; secondary input stays collapsed. */
+#care-agent .agent-voice {flex-direction:column;text-align:center;gap:24px;margin:32px auto 24px}
+#care-agent #agent-mic {width:clamp(200px,48vw,280px);height:clamp(200px,48vw,280px);border-radius:50%;background:#142343;color:white;border:10px solid #e4f6f0;box-shadow:0 0 0 12px #53b9aa22,0 18px 48px #14234320;display:grid;place-items:center;padding:40px}
+#care-agent #agent-mic svg {width:48%;min-width:80px;height:auto}
+#voice-wave {justify-content:center}
+#voice-state {font-size:22px}
+#agent-options {border-top:1px solid #cde3dc;padding-top:14px}
+#agent-options>summary {text-align:center;cursor:pointer;font-size:14px;padding:8px}
+#agent-options:not([open])~* {display:none}
+#care-agent [hidden] {display:none!important}
+#care-agent[data-voice="listening"] #agent-mic {box-shadow:0 0 0 calc(12px + var(--voice-level)*22px) #53b9aa33}
+@media(max-width:600px){#care-agent .agent-voice{margin:24px auto 20px}#care-agent #agent-mic{width:200px;height:200px}}
