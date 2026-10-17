@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "check": "node --check app.js && node --check data.js",
-    "dev": "node preview/server.js",
+    "dev": "node scripts/dev-integrated.js",
     "test:agent": "node --test tests/agent*.test.js"
   },
   "devDependencies": {

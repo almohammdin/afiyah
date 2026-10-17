@@ -1,0 +1,36 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createCareTools} from '../agent/tools.js';
+import {day} from '../domain.js';
+import {localParts} from '../care-time.js';
+import {JSDOM} from 'jsdom';
+const dom=new JSDOM('<div id="agent-anchor"></div>',{url:'https://example.test'});
+globalThis.window=dom.window;globalThis.document=dom.window.document;globalThis.addEventListener=dom.window.addEventListener.bind(dom.window);
+const D=await import('../data.js');D.startDemo();let p=D.createAgentSandbox(),refreshed=0,navigated='';
+const run=createCareTools({data:D,getPatient:()=>p,navigate:s=>navigated=s,refresh:async()=>{refreshed++},review:async()=>true});
+test('original data module creates separate sandbox preserving example',async()=>{const ps=await D.patients();assert.equal(ps.length,2);assert.equal(D.isAgentSandbox(ps[0]),false);assert.equal(D.isAgentSandbox(p),true);assert.equal(D.isAgentSandbox({...p}),false);});
+test('structured tool saves to original record API, deduplicates and undo is audited',async()=>{
+ const a={action:'save',section:'journal',name:'ملاحظة اختبار',notes:'افتراضية'};
+ const [r,r2]=await Promise.all([run(a,'same'),run(a,'same')]);assert.equal(r.ok,true);assert.equal(r.auditId,r2.auditId);assert.equal((await D.load(p)).journal.filter(x=>x.name===a.name).length,1);assert.ok(refreshed>0);
+ const undone=await run({action:'undo',auditId:r.auditId},'undo');assert.equal(undone.ok,true);assert.equal((await D.load(p)).journal.find(x=>x.name===a.name).deleted,true);assert.ok((await D.load(p)).audit.length>=2);
+});
+test('edit undo restores pre-edit value instead of mutated reference',async()=>{const r=await run({action:'save',section:'tasks',name:'قبل'},'new');let row=(await D.load(p)).tasks.find(x=>x.id===r.record.id);const edit=await run({action:'save',section:'tasks',id:row.id,revision:row.revision,name:'بعد'},'edit');assert.equal(edit.ok,true);await run({action:'undo',auditId:edit.auditId},'undo-edit');assert.equal((await D.load(p)).tasks.find(x=>x.id===row.id).name,'قبل');});
+test('real or old example cannot be read or mutated by voice tools',async()=>{const original=p;p=(await D.patients())[0];assert.equal((await run({action:'read',section:'medications'},'blocked')).ok,false);p=original;});
+test('identity change during review cancels edit',async()=>{const original=p;const row=(await D.load(p)).tasks[0];const other=(await D.patients())[0];const controlled=createCareTools({data:D,getPatient:()=>p,navigate:()=>{},refresh:async()=>{},review:async()=>{p=other;return true}});const r=await controlled({action:'save',section:'tasks',id:row.id,revision:row.revision,name:'forbidden'},'switch');assert.equal(r.ok,false);p=original;assert.notEqual((await D.load(p)).tasks[0].name,'forbidden');});
+test('read-only permission blocks recording and allows retrieval',async()=>{const readD={...D,can:(p,s,w)=>!w};const readonly=createCareTools({data:readD,getPatient:()=>p,navigate:()=>{},refresh:async()=>{},review:async()=>true});assert.equal((await readonly({action:'read',section:'medications'},'read')).ok,true);assert.equal((await readonly({action:'save',section:'journal',name:'denied'},'write')).ok,false);});
+test('two dose requests for one slot create one event, separate from event time',async()=>{const now=localParts(new Date(),p.timezone),a={action:'dose',medId:'sample',date:day(p.timezone),time:'08:00',occurredDate:now.day,occurredTime:now.time};const [r,s]=await Promise.all([run(a,'dose-a'),run(a,'dose-b')]);assert.equal(r.ok,true);assert.equal(s.kind,'duplicate');const rows=(await D.load(p)).doseEvents.filter(x=>x.medId==='sample'&&x.day===a.date&&x.time===a.time);assert.equal(rows.length,1);assert.ok(rows[0].occurredAt);assert.ok(rows[0].scheduledAt);});
+test('structured navigation does not require matching fixed utterances',async()=>{assert.equal((await run({action:'navigate',section:'medications'},'nav')).ok,true);assert.equal(navigated,'medications');});
+test('model cannot change medication through save tool',async()=>{assert.equal((await run({action:'save',section:'medications',name:'changed'},'med-edit')).ok,false);});
+test('tool results strip real account identifiers and audit fields',async()=>{const r=await run({action:'today'},'privacy');assert.equal(JSON.stringify(r).includes('demo-owner'),false);assert.equal(JSON.stringify(r).includes('updatedById'),false);});
+test('integrated UI keeps same voice instance while navigating and closes it on patient switch',async()=>{
+ const {mountCareAgent}=await import('../agent/ui.js');let instance,starts=0,stops=0,ui;
+ class MockVoice{constructor(options){this.options=options;instance=this}async start(){this.active=true;starts++;this.options.onState('listening')}stop(){this.active=false;stops++;this.options.onState('idle')}interrupt(){}mute(){}sendText(){}}
+ const original=p;ui=mountCareAgent({data:D,getPatient:()=>p,navigate:section=>ui.update({patient:p,tab:section,logged:true}),refresh:async()=>{},selectSandbox:async()=>{},Voice:MockVoice,voiceEnabled:true});
+ dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true};
+ ui.update({patient:p,tab:'today',logged:true});assert.equal(document.querySelector('#agent-options').open,false);
+ document.querySelector('#agent-mic').click();document.querySelector('.agent-dialog button').click();await new Promise(r=>setImmediate(r));assert.equal(starts,1);
+ const count=stops;ui.park();ui.update({patient:p,tab:'medications',logged:true});assert.equal(stops,count);assert.equal(instance.active,true);assert.equal(document.querySelector('#care-agent').classList.contains('is-floating'),true);
+ await instance.options.onTool('open_input',{mode:'attachment'},'file');assert.equal(document.querySelector('#agent-options').open,true);assert.ok(document.querySelector('input[type=file]'));
+ await instance.options.onTool('open_input',{mode:'camera'},'camera');assert.equal(document.activeElement.id,'agent-camera');
+ p=(await D.patients())[0];ui.update({patient:p,tab:'today',logged:true});assert.equal(instance.active,false);assert.ok(stops>count);p=original;
+});

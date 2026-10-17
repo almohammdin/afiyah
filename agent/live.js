@@ -11,10 +11,11 @@ export function pcm16(input, rate) {
  return out;
 }
 export class LiveVoice {
- constructor({onState=()=>{},onLevel=()=>{},onText=()=>{},onTool=async()=>({ok:false}),getToken,loadSdk=()=>import('https://cdn.jsdelivr.net/npm/@google/genai@2.14.0/+esm')}={}) {
-  Object.assign(this,{onState,onLevel,onText,onTool,getToken,loadSdk}); this.generation=0;this.state='idle';this.muted=false;this.sources=new Set();this.calls=new Map();
+ constructor({onState=()=>{},onLevel=()=>{},onText=()=>{},onTool=async()=>({ok:false}),getToken,tools=liveTools,instruction=liveInstruction,loadSdk=()=>import('https://cdn.jsdelivr.net/npm/@google/genai@2.14.0/+esm')}={}) {
+  Object.assign(this,{onState,onLevel,onText,onTool,getToken,tools,instruction,loadSdk}); this.generation=0;this.state='idle';this.muted=false;this.sources=new Set();this.calls=new Map();
  }
  set(value){this.state=value;this.onState(value);}
+ sendText(text){if(!this.active||!this.session)throw Error("ابدأ الاتصال الصوتي أولا");this.session.sendClientContent({turns:[{role:"user",parts:[{text}]}],turnComplete:true});}
  async start(){
   if(this.active)return;
   if(!this.getToken)throw Error('يلزم اعتماد رابط معاينة عافية في خدمة إصدار رمز الصوت');
@@ -29,7 +30,7 @@ export class LiveVoice {
    const [token,sdk]=await Promise.all([this.getToken(),this.loadSdk()]);
    if(generation!==this.generation)return;
    const client=new sdk.GoogleGenAI({apiKey:token,httpOptions:{apiVersion:'v1alpha'}});
-   const session=await client.live.connect({model:'gemini-3.1-flash-live-preview',config:{responseModalities:['AUDIO'],systemInstruction:liveInstruction,inputAudioTranscription:{},outputAudioTranscription:{},speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:'Kore'}}},tools:[{functionDeclarations:liveTools}]},callbacks:{onmessage:m=>{if(generation===this.generation)this.message(m,generation)},onerror:()=>{if(generation===this.generation){this.stop();this.set('failed')}},onclose:()=>{if(generation===this.generation){this.stop();this.set('failed')}}}});
+   const session=await client.live.connect({model:'gemini-3.1-flash-live-preview',config:{responseModalities:['AUDIO'],systemInstruction:this.instruction,inputAudioTranscription:{},outputAudioTranscription:{},speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:'Kore'}}},tools:[{functionDeclarations:this.tools}]},callbacks:{onmessage:m=>{if(generation===this.generation)this.message(m,generation)},onerror:()=>{if(generation===this.generation){this.stop();this.set('failed')}},onclose:()=>{if(generation===this.generation){this.stop();this.set('failed')}}}});
    if(generation!==this.generation){session.close();return;}
    this.session=session;this.nextTime=this.context.currentTime;
    this.source=this.context.createMediaStreamSource(stream);
@@ -46,8 +47,8 @@ export class LiveVoice {
  }
  async tool(call,generation){
   // Cache the promise, including failed responses: repeats never execute twice.
-  if(!call.id)return;
-  if(!this.calls.has(call.id))this.calls.set(call.id,Promise.resolve().then(()=>this.onTool(call.name,call.args||{})).catch(()=>({ok:false,message:'لم يتأكد تنفيذ الطلب'})));
+  if(!call.id||generation!==this.generation)return;
+  if(!this.calls.has(call.id))this.calls.set(call.id,Promise.resolve().then(()=>this.onTool(call.name,call.args||{},call.id)).catch(()=>({ok:false,message:'لم يتأكد تنفيذ الطلب'})));
   const result=await this.calls.get(call.id);
   if(generation===this.generation)this.session?.sendToolResponse({functionResponses:[{id:call.id,name:call.name,response:result}]});
  }
