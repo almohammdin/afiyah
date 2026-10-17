@@ -1,0 +1,10 @@
+{
+  "score": 3,
+  "scope": "repository-only; deployed rules NOT verified; no emulator run in this task",
+  "summary": "Existing rules have ownership, verified identity, membership and audit-linked writes; they do not establish authorization for the new server agent, private attachments or notifications. This provisional integration score is not a rating of deployed rules.",
+  "findings": [
+    {"check":"Authority Source","severity":"major","issue":"No authenticated administrative access to inspect the currently deployed rules or verify they match the repository","recommendation":"Read deployed release/ruleset with approved read-only access before any activation"},
+    {"check":"Business Logic vs. Rules","severity":"moderate","issue":"New agent operations, attachment access, recipient consent and notification lifecycle are implemented only in the isolated demo server","recommendation":"Implement and emulator-test production server authentication, ACL checks and storage boundaries before connecting Firebase"},
+    {"check":"Storage Abuse","severity":"moderate","issue":"Preview uses finite synthetic fixture hashes and local extraction; no general upload scanning or production retention policy exists","recommendation":"Approve and test general private storage, file isolation, scanning, quotas and deletion policy separately"}
+  ]
+}
