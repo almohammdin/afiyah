@@ -94,7 +94,7 @@ const server = http.createServer(async (req, res) => {
     if (!["GET", "HEAD"].includes(req.method)) return json(res, 405, {});
     let file = path === "/" ? "/index.html" : path;
     if (
-      !/^\/(assets\/[\w./-]+|[\w-]+\.(js|css|html|webmanifest)|preview\/(agent|adapter|voice|policy|device)\.(js|css|html)|preview\/fixtures\/synthetic-[a-z-]+\.(pdf|png))$/.test(
+      !/^\/(assets\/[\w./-]+|preview\/web\/(?:preview\/)?[\w-]+\.(?:js|html)|[\w-]+\.(js|css|html|webmanifest)|preview\/(agent|adapter|voice|policy|device)\.(js|css|html)|preview\/fixtures\/synthetic-[a-z-]+\.(pdf|png))$/.test(
         file,
       ) ||
       file.includes("..")
