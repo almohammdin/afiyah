@@ -1,5 +1,5 @@
 import {operationId} from './agent/id.js';
-import {makeExample} from './example-patient.js?v=20261015-example-copy';
+import {makeExample} from './example-patient.js?v=20261018-rich-example';
 import {localInstant,recordable,eventWarnings,zones} from './care-time.js';
 import {config} from './config.js';
 import {sections,day,validate,slotId,doseWarnings,active} from './domain.js?v=20261014-care-fixes';

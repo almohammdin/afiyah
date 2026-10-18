@@ -383,3 +383,17 @@
 #agent-transcript{max-height:280px;overflow:auto;text-align:start;border-radius:12px;background:#ffffffb8;padding:12px;margin-top:12px}
 #agent-transcript:empty::before{content:'ابدأ بكتابة رسالتك';color:#60737a;font-size:13px}
 #agent-transcript p{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0}
+
+#care-agent .emergency-panel{position:static;margin-top:12px;max-width:100%;box-shadow:none}
+
+.unified-home{max-width:1440px!important;padding-block:clamp(16px,3vh,32px)!important}
+.home-intro{gap:clamp(24px,5vw,72px);padding-bottom:24px;grid-template-columns:minmax(0,1fr) minmax(340px,.85fr)}
+.home-intro .hero .actions{margin-top:24px}
+.home-intro .hero h1{margin-bottom:16px}
+.home-intro #care-agent .agent-top h2{font-size:18px}
+#patient-workspace>summary{cursor:pointer;list-style:none;padding:16px 20px;background:white;border:1px solid #dbe5e4;border-radius:14px;font-family:'Thmanyah Sans',sans-serif;font-feature-settings:'salt' 1;display:flex;align-items:center;justify-content:space-between}
+#patient-workspace>summary::after{content:'';width:9px;height:9px;border-inline-end:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);margin:0 6px 5px}
+#patient-workspace[open]>summary::after{transform:rotate(225deg);margin-bottom:0}
+#patient-workspace>summary::-webkit-details-marker{display:none}
+#patient-workspace[open]>summary{margin-bottom:16px}
+@media(max-width:700px){.home-intro{grid-template-columns:minmax(0,1fr);gap:18px}.home-intro .hero{padding:0}.home-intro .hero h1{font-size:28px;margin-bottom:8px}.home-intro .hero .hero-subtitle{font-size:17px;line-height:1.6;margin-bottom:8px}.home-intro .hero .actions{margin-top:12px}.home-intro #care-agent .agent-top h2{font-size:17px}.home-intro #care-agent .agent-voice{margin:20px auto;gap:16px}#patient-workspace{padding-top:12px}.home-intro #care-agent{padding:16px 14px}}

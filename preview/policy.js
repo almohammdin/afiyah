@@ -37,7 +37,7 @@ export function plan(text, { patient, entries, pending } = {}) {
     }
   if (/اخذت|تناولت|سجل.*جرع/.test(t)) {
     const meds = entries.medications.filter(
-      (m) => !m.deleted && t.includes(normalize(m.name)),
+      (m) => !m.deleted && [m.name,...m.name.split("·"),...(m.ingredient||"").split("·").slice(0,2)].some(value=>{const name=normalize(value.trim());return name.length>2&&t.includes(name)}),
     );
     if (meds.length !== 1)
       return { question: "ما اسم الدواء كما يظهر في الملف؟" };
