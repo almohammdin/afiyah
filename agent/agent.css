@@ -360,3 +360,12 @@
 #care-agent #agent-input-area input{max-width:100%}
 #care-agent .agent-dialog pre{white-space:pre-wrap}
 @media(max-width:600px){#care-agent .agent-top h2{font-size:18px}}
+
+.unified-home{display:block;align-content:start}
+.home-intro{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,.85fr);gap:32px;align-items:center;padding:16px 0 24px}
+.home-intro .hero{padding:0;max-width:none}
+.home-intro .hero h1{font-size:clamp(30px,3.4vw,48px)}
+.home-intro .hero .hero-subtitle{font-size:clamp(18px,1.8vw,24px);line-height:1.7}
+.home-intro #care-agent{margin:0;width:100%;box-sizing:border-box}
+#patient-workspace{scroll-margin-top:20px;border-top:1px solid var(--line);padding-top:20px}
+@media(max-width:700px){.home-intro{grid-template-columns:minmax(0,1fr);gap:16px;padding-top:0}.home-intro .hero h1{font-size:30px;line-height:1.35}.home-intro .hero .hero-subtitle{font-size:18px}.home-intro #care-agent{padding:16px}}

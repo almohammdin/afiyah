@@ -1,12 +1,12 @@
 import {operationId} from './id.js';
 import {LiveVoice,liveInstruction,liveTools} from './live.js';
 import {createCareTools,careDeclaration} from './tools.js';
-import {connection,getLiveToken} from './connection.js';
+import {connection,getLiveToken,checkVoiceConnection} from './connection.js';
 import {safety} from './safety.js';
 const mic='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg>';
 export function mountCareAgent({data:D,getPatient,navigate,refresh,selectSandbox,Voice=LiveVoice,voiceEnabled=connection.enabled}){
  const host=document.createElement('section');host.id='care-agent';host.hidden=true;host.setAttribute('aria-label','مساعد عافية');
- host.innerHTML=`<div class="agent-top"><div><h2>معك في تفاصيل العناية</h2><div id="agent-person"></div></div><button id="agent-expand" aria-label="تصغير أو توسيع المساعد">↗</button></div><div class="agent-body"><div class="agent-voice"><button id="agent-mic" aria-label="تحدث مع عافية">${mic}</button><div><strong id="voice-state" role="status">تحدث مع عافية</strong><div id="voice-wave" aria-hidden="true">${'<i></i>'.repeat(16)}</div><small id="voice-description">اضغط لبدء المحادثة</small></div></div><p id="agent-notice" role="status"></p><button id="agent-test">فتح ملف اختبار الوكيل</button><div class="voice-controls" id="active-controls" hidden><button id="voice-mute">كتم</button><button id="voice-interrupt">مقاطعة</button><button id="voice-stop">إنهاء</button></div><details id="agent-options"><summary>الكتابة والمرفقات والكاميرا</summary><form id="agent-form"><label class="sr-only" for="agent-input">اكتب للمساعد</label><input id="agent-input" maxlength="2000" placeholder="اكتب طلبك"><button>إرسال</button></form><div class="voice-controls"><button id="agent-attach">إرفاق</button><button id="agent-camera">تشغيل الكاميرا</button></div><div id="agent-input-area"></div><details><summary>المحادثة</summary><div id="agent-transcript"></div></details></details><div id="agent-results" aria-live="polite"></div></div><div class="agent-mini"><button id="mini-mic" aria-label="توسيع المساعد">${mic}</button><span class="mini-state">جاهز</span><button data-mini="voice-mute">كتم</button><button data-mini="voice-interrupt">مقاطعة</button><button data-mini="voice-stop">إنهاء</button></div>`;
+ host.innerHTML=`<div class="agent-top"><div><h2>معك في تفاصيل العناية</h2><div id="agent-person"></div></div><button id="agent-expand" aria-label="تصغير أو توسيع المساعد">↗</button></div><div class="agent-body"><div class="agent-voice"><button id="agent-mic" aria-label="تحدث مع عافية">${mic}</button><div><strong id="voice-state" role="status">تحدث مع عافية</strong><div id="voice-wave" aria-hidden="true">${'<i></i>'.repeat(16)}</div><small id="voice-description">اضغط لبدء المحادثة</small></div></div><p id="agent-notice" role="status"></p><button id="agent-test">فتح ملف اختبار الوكيل</button><div class="voice-controls" id="active-controls" hidden><button id="voice-mute">كتم</button><button id="voice-interrupt">مقاطعة</button><button id="voice-stop">إنهاء</button></div><details id="agent-options"><summary>الكتابة والمرفقات والكاميرا</summary><form id="agent-form"><label class="sr-only" for="agent-input">اكتب للمساعد</label><input id="agent-input" maxlength="2000" placeholder="اكتب طلبك"><button>إرسال</button></form><div class="voice-controls"><button id="agent-attach">إرفاق</button><button id="agent-camera">تشغيل الكاميرا</button><button id="agent-check">فحص الاتصال</button></div><div id="agent-input-area"></div><details><summary>المحادثة</summary><div id="agent-transcript"></div></details></details><div id="agent-results" aria-live="polite"></div></div><div class="agent-mini"><button id="mini-mic" aria-label="توسيع المساعد">${mic}</button><span class="mini-state">جاهز</span><button data-mini="voice-mute">كتم</button><button data-mini="voice-interrupt">مقاطعة</button><button data-mini="voice-stop">إنهاء</button></div>`;
  document.body.append(host);const $=s=>host.querySelector(s);
  const emergency=document.createElement('details');emergency.className='emergency-panel';emergency.innerHTML='<summary>مساعدة عاجلة</summary><p>عند طارئ محتمل اطلب المساعدة العاجلة ولا تنتظر الوكيل</p><label>البلد الحالي <select><option value="">اختر البلد</option><option value="SA">السعودية</option><option value="other">بلد آخر</option></select></label><div class="calls"></div>';document.body.append(emergency);
  const country=()=>emergency.querySelector('select').value;
@@ -43,6 +43,7 @@ export function mountCareAgent({data:D,getPatient,navigate,refresh,selectSandbox
  }});
  function position(){const anchor=document.getElementById('agent-anchor');const floating=minimized||(!expanded&&(tab!=='today'||!anchor||anchor.getBoundingClientRect().bottom<70));host.classList.toggle('is-floating',floating);host.classList.toggle('is-expanded',expanded);}
  async function start(){
+  if(!D.user()){await selectSandbox();}
   if(!sessionAllowed()){card('افتح ملف اختبار الوكيل لتجربة الحديث');return;}
   if(voice.active){voice.interrupt();return;}
   if(!voiceEnabled){$('#agent-notice').textContent='تفعيل المحادثة الصوتية بانتظار اعتماد ربط الاختبار';return;}
@@ -53,6 +54,7 @@ export function mountCareAgent({data:D,getPatient,navigate,refresh,selectSandbox
  $('#agent-mic').onclick=start;$('#voice-mute').onclick=()=>voice.mute();$('#voice-interrupt').onclick=()=>voice.interrupt();$('#voice-stop').onclick=()=>{voice.stop();stopCamera();cancelReview?.()};
  for(const b of host.querySelectorAll('[data-mini]'))b.onclick=()=>$('#'+b.dataset.mini).click();
  $('#agent-expand').onclick=()=>{expanded=host.classList.contains('is-floating');minimized=!expanded;position()};$('#mini-mic').onclick=()=>{expanded=true;minimized=false;position()};
+ $('#agent-check').onclick=async()=>{const button=$('#agent-check');button.disabled=true;$('#agent-notice').textContent='أفحص الاتصال';try{await checkVoiceConnection();$('#agent-notice').textContent='نجح التحقق وإصدار رمز الاتصال، جرب الميكروفون الآن'}catch(error){$('#agent-notice').textContent=error.message}finally{button.disabled=false}};
  $('#agent-test').onclick=async()=>{voice.stop();await selectSandbox();document.getElementById('agent-anchor')?.scrollIntoView({block:'start'});};
  $('#agent-form').onsubmit=e=>{e.preventDefault();if(!sessionAllowed()){card('اختر ملف اختبار الوكيل');return;}const text=$('#agent-input').value.trim();if(!text)return;const risk=safety(text,country());if(risk){card([risk.message,risk.question,risk.advice].filter(Boolean).join(' · '));if(risk.kind==='urgent')emergency.open=true;return;}try{voice.sendText(text);$('#agent-input').value=''}catch(err){card(err.message)}};
  function attach(){stopCamera();const area=$('#agent-input-area');const p=document.createElement('p');p.textContent='اختر ملف اختبار فقط، المعاينة لا ترسل المستندات إلى المساعد';const input=document.createElement('input');input.type='file';input.accept='.pdf,.png';input.setAttribute('aria-label','إرفاق ملف اختبار');area.append(p,input);
@@ -64,8 +66,8 @@ export function mountCareAgent({data:D,getPatient,navigate,refresh,selectSandbox
  return {park(){if(host.isConnected)document.body.append(host)},update({patient,tab:nextTab,logged,loading}){
   tab=nextTab;const key=logged?D.user()?.uid+':'+(patient?.id||''):'';
   if(key!==currentKey){voice.stop();stopCamera();cancelReview?.();$('#agent-results').replaceChildren();$('#agent-transcript').replaceChildren();transcriptRow=null;transcriptRole='';expanded=false;minimized=false;currentKey=key;}
-  host.hidden=!logged;const anchor=document.getElementById('agent-anchor');if(anchor)anchor.append(host);
-  $('#agent-person').textContent=patient?patient.name+' · '+(D.isAgentSandbox(patient)?'ملف اختبار الوكيل':'الملف المحدد'): 'اختر ملف المريض';
+  host.hidden=false;const anchor=document.getElementById('agent-anchor');if(anchor)anchor.append(host);
+  $('#agent-person').textContent=patient?patient.name+' · '+(D.isAgentSandbox(patient)?'ملف اختبار الوكيل':'الملف المحدد'): 'جرب الحديث مع عافية';
   $('#agent-test').hidden=D.isAgentSandbox(patient);$('#agent-notice').textContent=D.isAgentSandbox(patient)?'بيانات افتراضية، وتسجيلات الاختبار مؤقتة':'جرب الحديث بملف افتراضي معزول عن سجلاتك';
   $('#agent-mic').disabled=!!loading;position();
  }};
