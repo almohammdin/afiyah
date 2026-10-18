@@ -48,7 +48,7 @@ export function mountCareAgent({data:D,getPatient,navigate,refresh,selectSandbox
   if(!voiceEnabled){$('#agent-notice').textContent='تفعيل المحادثة الصوتية بانتظار اعتماد ربط الاختبار';return;}
   if(!await review({title:'بدء محادثة اختبار',after:'سيعالج Google الصوت ويقرأ ملف سارة الافتراضي بصوت مسموع، استخدم معلومات افتراضية فقط'}))return;
   if(!sessionAllowed())return;sessionKey=operationId();
-  try{await voice.start()}catch(e){$('#agent-notice').textContent=e.message;}
+  try{await voice.start()}catch(e){$('#agent-notice').textContent=({NotFoundError:'لم يعثر المتصفح على ميكروفون، وصل ميكروفونا ثم أعد المحاولة',NotAllowedError:'اسمح باستخدام الميكروفون من إعدادات المتصفح ثم أعد المحاولة',NotReadableError:'تعذر تشغيل الميكروفون، أغلق التطبيقات التي تستخدمه ثم أعد المحاولة'})[e.name]||e.message;}
  }
  $('#agent-mic').onclick=start;$('#voice-mute').onclick=()=>voice.mute();$('#voice-interrupt').onclick=()=>voice.interrupt();$('#voice-stop').onclick=()=>{voice.stop();stopCamera();cancelReview?.()};
  for(const b of host.querySelectorAll('[data-mini]'))b.onclick=()=>$('#'+b.dataset.mini).click();

@@ -23,6 +23,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install document test tools
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils tesseract-ocr tesseract-ocr-eng
       - run: npm run check && npm test
       - run: node --check dashboard.js && node --check domain.js
       - uses: actions/setup-java@v4
@@ -36,7 +38,9 @@ jobs:
         run: |
           mkdir -p public
           cp index.html style.css base.css app.js data.js example-patient.js dashboard.js domain.js care-time.js date-display.js footer.js config.js visit-report.js visit-report-ui.js visit-report.css visit-print.css manifest.webmanifest public/
-          cp -R assets public/
+          cp -R assets agent public/
+          mkdir -p public/preview/fixtures
+          cp preview/fixtures/manifest.json public/preview/fixtures/
           touch public/.nojekyll
           node scripts/stamp-release.mjs public/footer.js
           node scripts/verify-public.mjs public
