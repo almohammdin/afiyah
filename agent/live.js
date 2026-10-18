@@ -29,7 +29,7 @@ export class LiveVoice {
    this.set('connecting');
    const [token,sdk]=await Promise.all([this.getToken(),this.loadSdk()]);
    if(generation!==this.generation)return;
-   const client=new sdk.GoogleGenAI({apiKey:token,httpOptions:{apiVersion:'v1alpha'}});
+   const client=new sdk.GoogleGenAI({apiKey:token,httpOptions:{apiVersion:'v1beta'}});
    const session=await client.live.connect({model:'gemini-3.1-flash-live-preview',config:{responseModalities:['AUDIO'],systemInstruction:this.instruction,inputAudioTranscription:{},outputAudioTranscription:{},speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:'Kore'}}},tools:[{functionDeclarations:this.tools}]},callbacks:{onmessage:m=>{if(generation===this.generation)this.message(m,generation)},onerror:()=>{if(generation===this.generation){this.stop();this.set('failed')}},onclose:()=>{if(generation===this.generation){this.stop();this.set('failed')}}}});
    if(generation!==this.generation){session.close();return;}
    this.session=session;this.nextTime=this.context.currentTime;
