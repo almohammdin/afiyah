@@ -1,3 +1,4 @@
+import {ConversationScreen} from './screen-awake.js';
 import { persona } from './policy.js';
 
 export const liveInstruction = `${persona}
@@ -12,7 +13,7 @@ export function pcm16(input, rate) {
 }
 export class LiveVoice {
  constructor({onState=()=>{},onLevel=()=>{},onText=()=>{},onTool=async()=>({ok:false}),getToken,tools=liveTools,instruction=liveInstruction,loadSdk=()=>import('https://cdn.jsdelivr.net/npm/@google/genai@2.14.0/+esm')}={}) {
-  Object.assign(this,{onState,onLevel,onText,onTool,getToken,tools,instruction,loadSdk}); this.generation=0;this.state='idle';this.muted=false;this.sources=new Set();this.calls=new Map();
+  Object.assign(this,{onState,onLevel,onText,onTool,getToken,tools,instruction,loadSdk}); this.screen=new ConversationScreen();this.generation=0;this.state='idle';this.muted=false;this.sources=new Set();this.calls=new Map();
  }
  set(value){this.state=value;this.onState(value);}
  sendText(text){if(!this.active||!this.session)throw Error("ابدأ الاتصال الصوتي أولا");this.session.sendClientContent({turns:[{role:"user",parts:[{text}]}],turnComplete:true});}
@@ -35,13 +36,16 @@ export class LiveVoice {
    const client=new sdk.GoogleGenAI({apiKey:token,httpOptions:{apiVersion:'v1beta'}});
    const session=await client.live.connect({model:'gemini-3.1-flash-live-preview',config:{responseModalities:['AUDIO'],systemInstruction:this.instruction,inputAudioTranscription:{},outputAudioTranscription:{},speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:'Kore'}}},tools:[{functionDeclarations:this.tools}]},callbacks:{onmessage:m=>{if(generation===this.generation)this.message(m,generation)},onerror:()=>{if(generation===this.generation){this.stop();this.set('failed')}},onclose:()=>{if(generation===this.generation){this.stop();this.set('failed')}}}});
    if(generation!==this.generation){session.close();return;}
-   this.session=session;if(textOnly){this.set('writing');return;}this.nextTime=this.context.currentTime;
+   this.session=session;if(!textOnly)this.screen.start();if(textOnly){this.set('writing');return;}this.nextTime=this.context.currentTime;
    this.source=this.context.createMediaStreamSource(stream);
    this.processor=this.context.createScriptProcessor(4096,1,1);
    this.silent=this.context.createGain();this.silent.gain.value=0;
    this.processor.onaudioprocess=e=>{
     if(!this.active||this.muted||this.sources.size)return; // prevent speaker echo; explicit interruption remains available
     const input=e.inputBuffer.getChannelData(0);this.onLevel(Math.max(...input.map(Math.abs)));
+    // RMS threshold rejects quiet background noise; transcriptions also count as speech.
+    let energy=0;for(const value of input)energy+=value*value;
+    if(Math.sqrt(energy/input.length)>0.025)this.screen.activity();
     const pcm=pcm16(input,this.context.sampleRate),bytes=new Uint8Array(pcm.buffer);
     this.session.sendRealtimeInput({audio:{data:btoa(String.fromCharCode(...bytes)),mimeType:'audio/pcm;rate=16000'}});
    };
@@ -59,7 +63,7 @@ export class LiveVoice {
   for(const call of message.toolCall?.functionCalls||[])void this.tool(call,generation);
   const content=message.serverContent;if(!content)return;
   if(content.interrupted)this.interrupt();
-  if(content.inputTranscription?.text)this.onText('user',content.inputTranscription.text);
+  if(content.inputTranscription?.text){this.screen.activity();this.onText('user',content.inputTranscription.text);}
   if(content.outputTranscription?.text)this.onText('assistant',content.outputTranscription.text);
   for(const part of content.modelTurn?.parts||[])if(part.inlineData?.data&&!this.textOnly)this.play(part.inlineData.data);
   if(content.turnComplete&&!this.sources.size)this.set(this.textOnly?'writing':this.muted?'muted':'listening');
@@ -70,10 +74,10 @@ export class LiveVoice {
   const values=new DataView(bytes.buffer),buffer=this.context.createBuffer(1,bytes.length/2,24000),channel=buffer.getChannelData(0);
   for(let i=0;i<channel.length;i++)channel[i]=values.getInt16(i*2,true)/32768;
   const source=this.context.createBufferSource();source.buffer=buffer;source.connect(this.context.destination);
-  source.onended=()=>{this.sources.delete(source);source.disconnect();if(this.active&&!this.sources.size)this.set(this.muted?'muted':'listening')};
-  this.sources.add(source);this.nextTime=Math.max(this.context.currentTime,this.nextTime||0);source.start(this.nextTime);this.nextTime+=buffer.duration;this.set('speaking');
+  source.onended=()=>{this.sources.delete(source);source.disconnect();this.screen.activity();if(this.active&&!this.sources.size)this.set(this.muted?'muted':'listening')};
+  this.screen.activity();this.sources.add(source);this.nextTime=Math.max(this.context.currentTime,this.nextTime||0);source.start(this.nextTime);this.nextTime+=buffer.duration;this.set('speaking');
  }
  mute(){this.muted=!this.muted;this.stream?.getTracks().forEach(t=>t.enabled=!this.muted);if(this.muted)this.session?.sendRealtimeInput({audioStreamEnd:true});this.set(this.muted?'muted':this.active?'listening':'idle');}
  interrupt(){for(const source of this.sources){source.onended=null;try{source.stop();source.disconnect()}catch{}}this.sources.clear();this.nextTime=this.context?.currentTime||0;this.set(this.active?(this.textOnly?'writing':this.muted?'muted':'listening'):'idle');}
- stop(){++this.generation;this.active=false;this.interrupt();const session=this.session;this.session=null;try{session?.close()}catch{};if(this.processor)this.processor.onaudioprocess=null;for(const node of [this.source,this.processor,this.silent])try{node?.disconnect()}catch{};this.stream?.getTracks().forEach(t=>{t.onended=null;t.stop()});this.stream=null;this.context?.close().catch(()=>{});this.context=null;this.calls.clear();this.muted=false;this.set('idle');}
+ stop(){this.screen.stop();++this.generation;this.active=false;this.interrupt();const session=this.session;this.session=null;try{session?.close()}catch{};if(this.processor)this.processor.onaudioprocess=null;for(const node of [this.source,this.processor,this.silent])try{node?.disconnect()}catch{};this.stream?.getTracks().forEach(t=>{t.onended=null;t.stop()});this.stream=null;this.context?.close().catch(()=>{});this.context=null;this.calls.clear();this.muted=false;this.set('idle');}
 }

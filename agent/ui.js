@@ -1,5 +1,5 @@
 import {operationId} from './id.js';
-import {LiveVoice,liveInstruction,liveTools} from './live.js?v=20261018-chat';
+import {LiveVoice,liveInstruction,liveTools} from './live.js?v=20261018-screen-awake';
 import {createCareTools,careDeclaration} from './tools.js';
 import {connection,getLiveToken,checkVoiceConnection} from './connection.js?v=20261018-chat';
 import {safety} from './safety.js';
