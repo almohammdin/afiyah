@@ -369,3 +369,12 @@
 .home-intro #care-agent{margin:0;width:100%;box-sizing:border-box}
 #patient-workspace{scroll-margin-top:20px;border-top:1px solid var(--line);padding-top:20px}
 @media(max-width:700px){.home-intro{grid-template-columns:minmax(0,1fr);gap:16px;padding-top:0}.home-intro .hero h1{font-size:30px;line-height:1.35}.home-intro .hero .hero-subtitle{font-size:18px}.home-intro #care-agent{padding:16px}}
+
+#care-agent .agent-icon,.emergency-panel .agent-icon{width:20px;height:20px;flex:none;fill:none;stroke:currentColor}
+#care-agent #agent-expand{width:44px;height:44px;min-width:44px;display:grid;place-items:center;padding:10px;border:1px solid #cde0da;border-radius:12px;background:#fff;color:#142343}
+#care-agent .voice-controls button{display:inline-flex;align-items:center;justify-content:center;gap:7px}
+#care-agent #voice-stop{color:#984b46;background:#fff9f7}
+#agent-options>summary,.emergency-panel>summary{display:flex;align-items:center;justify-content:center;gap:8px;list-style:none}
+#agent-options>summary::-webkit-details-marker,.emergency-panel>summary::-webkit-details-marker{display:none}
+#agent-options[open]>summary>.agent-icon,.emergency-panel[open]>summary>.agent-icon{transform:rotate(180deg)}
+.emergency-panel:not([open]){padding:8px 12px;font-size:12px}
