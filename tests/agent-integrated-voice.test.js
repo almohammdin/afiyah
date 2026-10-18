@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {LiveVoice} from '../agent/live.js';
+test('integrated live transport starts, sends structured tools, mutes and releases microphone on stop (mocked)',async()=>{
+ let stopped=0,closed=0,config,callbacks,clientOptions;const messages=[],track={enabled:true,stop(){stopped++}};
+ const node=()=>({connect(){},disconnect(){},gain:{value:1}});
+ class AudioContext{constructor(){this.currentTime=0;this.sampleRate=48000;this.destination={}}async resume(){}async close(){closed++}createMediaStreamSource(){return node()}createScriptProcessor(){return node()}createGain(){return node()}}
+ Object.defineProperty(globalThis,'navigator',{configurable:true,value:{mediaDevices:{getUserMedia:async()=>({getTracks:()=>[track]})}}});globalThis.AudioContext=AudioContext;
+ const remote={close(){},sendRealtimeInput:m=>messages.push(m),sendToolResponse:m=>messages.push(m),sendClientContent:m=>messages.push(m)};
+ const loadSdk=async()=>({GoogleGenAI:class{constructor(options){clientOptions=options;this.live={connect:async opts=>{config=opts.config;callbacks=opts.callbacks;return remote}}}}});
+ const live=new LiveVoice({getToken:async()=>'synthetic-test-token',loadSdk,tools:[{name:'care_action'}],onTool:async()=>({ok:true,persisted:true})});
+ await live.start();assert.equal(clientOptions.httpOptions.apiVersion,'v1beta');assert.equal(live.state,'listening');assert.equal(config.tools[0].functionDeclarations[0].name,'care_action');
+ live.mute();assert.equal(track.enabled,false);live.mute();assert.equal(track.enabled,true);
+ live.sendText('افتح الأدوية');assert.equal(messages.at(-1).turnComplete,true);
+ live.interrupt();assert.equal(live.state,'listening');live.stop();assert.equal(stopped,1);assert.equal(closed,1);assert.equal(live.active,false);
+ callbacks.onmessage({toolCall:{functionCalls:[{id:'late',name:'care_action'}]}});await Promise.resolve();assert.equal(messages.some(m=>m.functionResponses),false);
+});
+test('late microphone permission after stop immediately releases track (mocked)',async()=>{
+ let release,stopped=0;Object.defineProperty(globalThis,'navigator',{configurable:true,value:{mediaDevices:{getUserMedia:()=>new Promise(r=>release=r)}}});
+ const live=new LiveVoice({getToken:async()=>'test'}),start=live.start();await Promise.resolve();live.stop();release({getTracks:()=>[{stop(){stopped++}}]});await start;assert.equal(stopped,1);assert.equal(live.active,false);
+});

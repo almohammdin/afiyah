@@ -1,3 +1,4 @@
+import {operationId} from './agent/id.js';
 import {makeExample} from './example-patient.js?v=20261015-example-copy';
 import {localInstant,recordable,eventWarnings,zones} from './care-time.js';
 import {config} from './config.js';
@@ -5,7 +6,18 @@ import {sections,day,validate,slotId,doseWarnings,active} from './domain.js?v=20
 let sdk,db,auth,person=null,demo=false,mem,initPromise,memOwner;
 export const user=()=>person;
 export const isDemo=()=>demo;
-const uid=()=>person.uid, email=()=>person.email.toLowerCase(), uuid=()=>crypto.randomUUID();
+let agentSandboxId=null,agentSandboxOwner=null;
+export function isAgentSandbox(p){return !!person&&agentSandboxOwner===person.uid&&p?.id===agentSandboxId&&mem?.patients.some(x=>x===p&&x._agentSandbox);}
+export function createAgentSandbox(){
+ if(!person)throw Error('سجل الدخول أو اختر استكشاف المنصة');
+ ensureExample();
+ const old=mem.patients.find(x=>isAgentSandbox(x));if(old)return old;
+ const sample=makeExample(person.uid);sample.patient.id='agent-test-'+operationId();sample.patient._agentSandbox=true;sample.patient.name='سارة · اختبار الوكيل';sample.patient.relation='';
+ agentSandboxId=sample.patient.id;agentSandboxOwner=person.uid;
+ mem.patients.push(sample.patient);mem.entries[sample.patient.id]=sample.entries;
+ return sample.patient;
+}
+const uid=()=>person.uid, email=()=>person.email.toLowerCase(), uuid=()=>operationId();
 const root='carePatients', grants='careMemberships';
 const rootFor=p=>p._legacy?'patients':root,grantsFor=p=>p._legacy?'memberships':grants;
 const local=p=>demo||p?._example;
@@ -84,7 +96,7 @@ async function changeDose(p,m,id,build,ack=false){
  });
 }
 export async function exportPatient(p){if(!owner(p))throw Error('التصدير الكامل متاح لصاحب الملف');const entries=await load(p);return {format:'afiyah-2',exportedAt:new Date().toISOString(),patient:p,entries,members:await members(p)};}
-export async function deletePatient(p){if(!owner(p))throw Error('الحذف متاح لصاحب الملف');if(local(p)){if(p._example){try{window.localStorage.setItem('afiyah-example-removed:'+uid(),'1');}catch{throw Error('تعذر حفظ حذف المثال في هذا المتصفح');}}delete mem.entries[p.id];mem.members=mem.members.filter(x=>x.patientId!==p.id);mem.patients=mem.patients.filter(x=>x.id!==p.id);return;}
+export async function deletePatient(p){if(!owner(p))throw Error('الحذف متاح لصاحب الملف');if(local(p)){if(p._example&&!p._agentSandbox){try{window.localStorage.setItem('afiyah-example-removed:'+uid(),'1');}catch{throw Error('تعذر حفظ حذف المثال في هذا المتصفح');}}delete mem.entries[p.id];mem.members=mem.members.filter(x=>x.patientId!==p.id);mem.patients=mem.patients.filter(x=>x.id!==p.id);return;}
  await sdk.updateDoc(ref(rootFor(p),p.id),{deleting:true});
  // Root remains until all pages are deleted; retries resume the same operation.
  for(const s of [...sections,'safety','doseEvents','doseGuards','audit']){for(;;){const page=await sdk.getDocs(sdk.query(col(rootFor(p),p.id,s),sdk.limit(150)));if(page.empty)break;const batch=sdk.writeBatch(db);page.docs.forEach(d=>batch.delete(d.ref));await batch.commit();}}

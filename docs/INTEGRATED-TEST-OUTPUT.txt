@@ -1,0 +1,71 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> afiyah@1.0.0 test
+> node --test tests/*.test.js
+
+✔ patient, caregiver, reader, unrelated patient enforced at server (49.10835ms)
+✔ two connections same scheduled dose produce one log; retries preserve same result (43.967569ms)
+✔ distinct scheduled slots are not duplicate danger (45.991391ms)
+✔ event time, registration time, actor and timezone are separate (24.751259ms)
+✔ sensitive changes require review; tokens scoped to actor and patient; stale edits reject (26.133066ms)
+✔ correction and undo are audited and cannot overwrite later family edits (30.851358ms)
+✔ attachment isolation and malicious document cannot invoke commands (24.08328ms)
+✔ box and unclear image never infer personal dose or schedule (20.059111ms)
+✔ channel authorization and consent are independent; scheduler no external sends (48.680068ms)
+✔ urgent guidance precedes data and unknown country has no guessed number (0.860569ms)
+✔ planner asks one time question; text and navigation work without model (29.690078ms)
+✔ missing log is not missed dose (44.512995ms)
+✔ provider cannot activate from environment key or dialect prompt alone (0.91474ms)
+✔ actual PDF extraction preserves page source, ignores malicious instructions and rejects unknown bytes (46.626823ms)
+✔ actual local OCR extracts box strength but not dose; blank image stays uncertain (256.577655ms)
+✔ durable idempotency survives reopening database in a second connection (74.546827ms)
+✔ forged fields and invalid appointment time cannot pass save tool (15.224492ms)
+✔ integrated live transport starts, sends structured tools, mutes and releases microphone on stop (mocked) (2.653145ms)
+✔ late microphone permission after stop immediately releases track (mocked) (0.456945ms)
+✔ original data module creates separate sandbox preserving example (2.218944ms)
+✔ structured tool saves to original record API, deduplicates and undo is audited (2.749339ms)
+✔ edit undo restores pre-edit value instead of mutated reference (1.823552ms)
+✔ real or old example cannot be read or mutated by voice tools (0.678707ms)
+✔ identity change during review cancels edit (0.585116ms)
+✔ read-only permission blocks recording and allows retrieval (0.701742ms)
+✔ two dose requests for one slot create one event, separate from event time (2.375889ms)
+✔ structured navigation does not require matching fixed utterances (0.253189ms)
+✔ model cannot change medication through save tool (0.212028ms)
+✔ tool results strip real account identifiers and audit fields (0.846138ms)
+✔ integrated UI keeps same voice instance while navigating and closes it on patient switch (74.755967ms)
+✔ live refuses missing token integration before microphone access (1.233668ms)
+✔ same provider call id executes once and returns same result (0.325237ms)
+✔ late tool result is not spoken in another patient session (0.190245ms)
+✔ audio conversion clamps signal to PCM16 (0.843393ms)
+✔ Saudi persona constrains tools and clinical advice (0.268372ms)
+✔ session survives layout movement; mute/interruption/end release tracks (350.00066ms)
+✔ late microphone grant cannot restart an ended session (0.496935ms)
+✔ microphone failure falls back to typing state without fabricated transcript (0.416544ms)
+✔ calendar crosses month/year boundaries and supports leap February (2.250191ms)
+✔ timeline combines scheduled doses, appointments and tasks in time order (9.980802ms)
+✔ chart preserves not-given and corrected categories without inventing historical missing doses (0.422753ms)
+✔ corrected dose remains pending until rerecorded (0.358708ms)
+✔ Umm al-Qura and Gregorian dates use Latin digits in all formats (28.260538ms)
+✔ invalid dates stay empty; clock uses patient timezone without seconds (2.381748ms)
+✔ Latin digits, dates and patient timezone (22.45846ms)
+✔ prescription limits and duplicates (0.487089ms)
+✔ independent dose slots; duplicate rejection; correction retains audit (26.448613ms)
+✔ role changes preserve acceptance and deletion is complete (1.439767ms)
+✔ hospital records validate and original records preserve their source (0.91497ms)
+✔ correction allows rerecord, yesterday and explicit actual time are validated (7.02862ms)
+✔ warnings ignore corrected entries and compare actual times on either side (0.828472ms)
+✔ timezone conversion and calendar export preserve appointment time without patient name (2.555919ms)
+✔ example is fictional, comprehensive, independently created and date-relative (65.659339ms)
+✔ accessible demo flow escapes input and renders multi-dose schedule (639.78836ms)
+✔ report snapshot respects section access and omits administrative data (22.641049ms)
+✔ report escapes user data and preserves prescribed dose and leading zeros (1.576953ms)
+✔ English labels preserve originals unless reviewed translations provided (2.851091ms)
+✔ date range validation and question filtering (2.291934ms)
+ℹ tests 58
+ℹ suites 0
+ℹ pass 58
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7075.523235

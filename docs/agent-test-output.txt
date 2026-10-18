@@ -1,0 +1,53 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> afiyah@1.0.0 test
+> node --test tests/*.test.js
+
+✔ patient, caregiver, reader, unrelated patient enforced at server (59.538062ms)
+✔ two connections same scheduled dose produce one log; retries preserve same result (49.621331ms)
+✔ distinct scheduled slots are not duplicate danger (38.772018ms)
+✔ event time, registration time, actor and timezone are separate (27.61559ms)
+✔ sensitive changes require review; tokens scoped to actor and patient; stale edits reject (28.198984ms)
+✔ correction and undo are audited and cannot overwrite later family edits (42.677919ms)
+✔ attachment isolation and malicious document cannot invoke commands (35.799771ms)
+✔ box and unclear image never infer personal dose or schedule (39.251747ms)
+✔ channel authorization and consent are independent; scheduler no external sends (40.037228ms)
+✔ urgent guidance precedes data and unknown country has no guessed number (0.905947ms)
+✔ planner asks one time question; text and navigation work without model (38.651463ms)
+✔ missing log is not missed dose (29.749177ms)
+✔ provider cannot activate from environment key or dialect prompt alone (1.110994ms)
+✔ actual PDF extraction preserves page source, ignores malicious instructions and rejects unknown bytes (54.230862ms)
+✔ actual local OCR extracts box strength but not dose; blank image stays uncertain (333.115517ms)
+✔ durable idempotency survives reopening database in a second connection (100.759194ms)
+✔ forged fields and invalid appointment time cannot pass save tool (18.661536ms)
+✔ session survives layout movement; mute/interruption/end release tracks (413.585162ms)
+✔ late microphone grant cannot restart an ended session (0.674401ms)
+✔ microphone failure falls back to typing state without fabricated transcript (0.275002ms)
+✔ calendar crosses month/year boundaries and supports leap February (2.213356ms)
+✔ timeline combines scheduled doses, appointments and tasks in time order (9.549385ms)
+✔ chart preserves not-given and corrected categories without inventing historical missing doses (0.547079ms)
+✔ corrected dose remains pending until rerecorded (0.322393ms)
+✔ Umm al-Qura and Gregorian dates use Latin digits in all formats (43.245294ms)
+✔ invalid dates stay empty; clock uses patient timezone without seconds (1.459086ms)
+✔ Latin digits, dates and patient timezone (50.013053ms)
+✔ prescription limits and duplicates (0.39343ms)
+✔ independent dose slots; duplicate rejection; correction retains audit (41.095514ms)
+✔ role changes preserve acceptance and deletion is complete (1.113358ms)
+✔ hospital records validate and original records preserve their source (1.917222ms)
+✔ correction allows rerecord, yesterday and explicit actual time are validated (8.279413ms)
+✔ warnings ignore corrected entries and compare actual times on either side (1.160479ms)
+✔ timezone conversion and calendar export preserve appointment time without patient name (3.247095ms)
+✔ example is fictional, comprehensive, independently created and date-relative (58.749721ms)
+✔ accessible demo flow escapes input and renders multi-dose schedule (696.432965ms)
+✔ report snapshot respects section access and omits administrative data (24.583207ms)
+✔ report escapes user data and preserves prescribed dose and leading zeros (1.252206ms)
+✔ English labels preserve originals unless reviewed translations provided (3.294836ms)
+✔ date range validation and question filtering (2.527496ms)
+ℹ tests 40
+ℹ suites 0
+ℹ pass 40
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7142.534747
