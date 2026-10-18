@@ -366,7 +366,7 @@
 .home-intro .hero{padding:0;max-width:none}
 .home-intro .hero h1{font-size:clamp(30px,3.4vw,48px)}
 .home-intro .hero .hero-subtitle{font-size:clamp(18px,1.8vw,24px);line-height:1.7}
-.home-intro #care-agent{margin:0;width:100%;box-sizing:border-box}
+.home-intro #care-agent:not(.is-floating):not(.is-expanded){margin:0;width:100%;box-sizing:border-box}
 #patient-workspace{scroll-margin-top:20px;border-top:1px solid var(--line);padding-top:20px}
 @media(max-width:700px){.home-intro{grid-template-columns:minmax(0,1fr);gap:16px;padding-top:0}.home-intro .hero h1{font-size:30px;line-height:1.35}.home-intro .hero .hero-subtitle{font-size:18px}.home-intro #care-agent{padding:16px}}
 
@@ -397,3 +397,24 @@
 #patient-workspace>summary::-webkit-details-marker{display:none}
 #patient-workspace[open]>summary{margin-bottom:16px}
 @media(max-width:700px){.home-intro{grid-template-columns:minmax(0,1fr);gap:18px}.home-intro .hero{padding:0}.home-intro .hero h1{font-size:28px;margin-bottom:8px}.home-intro .hero .hero-subtitle{font-size:17px;line-height:1.6;margin-bottom:8px}.home-intro .hero .actions{margin-top:12px}.home-intro #care-agent .agent-top h2{font-size:17px}.home-intro #care-agent .agent-voice{margin:20px auto;gap:16px}#patient-workspace{padding-top:12px}.home-intro #care-agent{padding:16px 14px}}
+
+/* Keep the voice surface compact without shrinking its primary control. */
+#care-agent{box-sizing:border-box}
+.home-intro #care-agent:not(.is-floating):not(.is-expanded) .agent-voice{gap:12px;margin:24px auto 16px}
+.home-intro .hero{min-width:0}
+.home-intro .hero h1,.home-intro .hero .hero-subtitle{text-wrap:balance}
+#care-agent.is-floating{width:min(380px,calc(100vw - 32px));bottom:max(16px,env(safe-area-inset-bottom));padding:14px}
+#care-agent.is-expanded{width:90vw;margin:0}
+#care-agent button:focus-visible,#agent-options>summary:focus-visible,#patient-workspace>summary:focus-visible{outline:3px solid #237567;outline-offset:4px}
+#care-agent button{touch-action:manipulation}
+#care-agent .voice-controls button,#agent-options>summary{min-height:44px}
+@media(max-width:700px){
+ .home-intro #care-agent:not(.is-floating):not(.is-expanded) .agent-voice{margin:18px auto 12px;gap:10px}
+ #care-agent.is-floating{inset-inline:12px;width:calc(100vw - 24px)}
+ #care-agent.is-expanded{inset:12px 12px auto;width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}
+}
+@media(prefers-reduced-motion:reduce){
+ #care-agent *,#care-agent *::before,#care-agent *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+
+.agent-processing-note{text-align:center;font-size:12px;line-height:1.6;color:#49656c;margin:8px 0}

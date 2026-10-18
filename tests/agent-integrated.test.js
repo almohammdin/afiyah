@@ -28,7 +28,7 @@ test('integrated UI keeps same voice instance while navigating and closes it on 
  const original=p;ui=mountCareAgent({data:D,getPatient:()=>p,navigate:section=>ui.update({patient:p,tab:section,logged:true}),refresh:async()=>{},selectSandbox:async()=>{},Voice:MockVoice,voiceEnabled:true});
  dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true};
  ui.update({patient:p,tab:'today',logged:true});assert.equal(document.querySelector('#agent-options').open,false);
- document.querySelector('#agent-mic').click();document.querySelector('.agent-dialog button').click();await new Promise(r=>setImmediate(r));assert.equal(starts,1);
+ document.querySelector('#agent-mic').click();assert.equal(document.querySelector('.agent-dialog'),null);await new Promise(r=>setImmediate(r));assert.equal(starts,1);
  const count=stops;ui.park();ui.update({patient:p,tab:'medications',logged:true});assert.equal(stops,count);assert.equal(instance.active,true);assert.equal(document.querySelector('#care-agent').classList.contains('is-floating'),true);
  await instance.options.onTool('open_input',{mode:'attachment'},'file');assert.equal(document.querySelector('#agent-options').open,true);assert.ok(document.querySelector('input[type=file]'));
  await instance.options.onTool('open_input',{mode:'camera'},'camera');assert.equal(document.activeElement.id,'agent-camera');
