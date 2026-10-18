@@ -378,3 +378,8 @@
 #agent-options>summary::-webkit-details-marker,.emergency-panel>summary::-webkit-details-marker{display:none}
 #agent-options[open]>summary>.agent-icon,.emergency-panel[open]>summary>.agent-icon{transform:rotate(180deg)}
 .emergency-panel:not([open]){padding:8px 12px;font-size:12px}
+
+#agent-notice:empty{display:none}
+#agent-transcript{max-height:280px;overflow:auto;text-align:start;border-radius:12px;background:#ffffffb8;padding:12px;margin-top:12px}
+#agent-transcript:empty::before{content:'ابدأ بكتابة رسالتك';color:#60737a;font-size:13px}
+#agent-transcript p{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0}

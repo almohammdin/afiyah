@@ -12,7 +12,7 @@ export function createAgentSandbox(){
  if(!person)throw Error('سجل الدخول أو اختر استكشاف المنصة');
  ensureExample();
  const old=mem.patients.find(x=>isAgentSandbox(x));if(old)return old;
- const sample=makeExample(person.uid);sample.patient.id='agent-test-'+operationId();sample.patient._agentSandbox=true;sample.patient.name='سارة · اختبار الوكيل';sample.patient.relation='';
+ const sample=makeExample(person.uid);sample.patient.id='agent-test-'+operationId();sample.patient._agentSandbox=true;sample.patient.name='سارة';sample.patient.relation='';
  agentSandboxId=sample.patient.id;agentSandboxOwner=person.uid;
  mem.patients.push(sample.patient);mem.entries[sample.patient.id]=sample.entries;
  return sample.patient;

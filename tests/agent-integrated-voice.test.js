@@ -19,3 +19,10 @@ test('late microphone permission after stop immediately releases track (mocked)'
  let release,stopped=0;Object.defineProperty(globalThis,'navigator',{configurable:true,value:{mediaDevices:{getUserMedia:()=>new Promise(r=>release=r)}}});
  const live=new LiveVoice({getToken:async()=>'test'}),start=live.start();await Promise.resolve();live.stop();release({getTracks:()=>[{stop(){stopped++}}]});await start;assert.equal(stopped,1);assert.equal(live.active,false);
 });
+test('writing connects without microphone and never plays received audio (mocked)',async()=>{
+ let callbacks,sent;Object.defineProperty(globalThis,'navigator',{configurable:true,value:{mediaDevices:{getUserMedia:()=>{throw Error('must not request microphone')}}}});
+ const loadSdk=async()=>({GoogleGenAI:class{constructor(){this.live={connect:async options=>{callbacks=options.callbacks;return {close(){},sendClientContent:m=>sent=m}}}}}});
+ const live=new LiveVoice({getToken:async()=>'synthetic',loadSdk});await live.start({textOnly:true});assert.equal(live.state,'writing');assert.equal(live.context,undefined);
+ live.play=()=>{throw Error('must not play audio')};callbacks.onmessage({serverContent:{modelTurn:{parts:[{inlineData:{data:'AAA='}}]},turnComplete:true}});
+ live.sendText('افتح الأدوية');assert.equal(sent.turns[0].parts[0].text,'افتح الأدوية');assert.equal(live.state,'writing');live.stop();assert.equal(live.active,false);
+});
