@@ -1,5 +1,5 @@
-// Activation is a separate approval from shipping the UI. No secret is stored here.
-export const connection = Object.freeze({enabled:false,origin:'https://almohammdin.github.io',endpoint:'https://mesraah-live-token.naif123456.workers.dev/token'});
+// Synthetic voice activation approved 2026-10-18. No secret is stored here.
+export const connection = Object.freeze({enabled:true,origin:'https://almohammdin.github.io',endpoint:'https://mesraah-live-token.naif123456.workers.dev/token'});
 let check;
 export async function getLiveToken(forceRefresh=false){
  if(!connection.enabled)throw Error('الصوت جاهز للربط وينتظر اعتماد تفعيل الاختبار');
