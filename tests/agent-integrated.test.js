@@ -27,7 +27,15 @@ test('integrated UI keeps same voice instance while navigating and closes it on 
  class MockVoice{constructor(options){this.options=options;instance=this}async start(){this.active=true;starts++;this.options.onState('listening')}stop(){this.active=false;stops++;this.options.onState('idle')}interrupt(){}mute(){}sendText(){}}
  const original=p;ui=mountCareAgent({data:D,getPatient:()=>p,navigate:section=>ui.update({patient:p,tab:section,logged:true}),refresh:async()=>{},selectSandbox:async()=>{},Voice:MockVoice,voiceEnabled:true});
  dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true};
+ const anchor=document.querySelector('#agent-anchor');let slotBottom=700;
+ anchor.getBoundingClientRect=()=>({bottom:slotBottom});
+ const host=document.querySelector('#care-agent');host.getBoundingClientRect=()=>({height:620});
  ui.update({patient:p,tab:'today',logged:true});assert.equal(document.querySelector('#agent-options').open,false);
+ slotBottom=60;window.dispatchEvent(new dom.window.Event('scroll'));assert.equal(host.classList.contains('is-floating'),true);assert.equal(anchor.style.minHeight,'620px');
+ slotBottom=90;window.dispatchEvent(new dom.window.Event('scroll'));assert.equal(host.classList.contains('is-floating'),true);
+ slotBottom=120;window.dispatchEvent(new dom.window.Event('scroll'));assert.equal(host.classList.contains('is-floating'),false);
+ slotBottom=90;window.dispatchEvent(new dom.window.Event('scroll'));assert.equal(host.classList.contains('is-floating'),false);
+ slotBottom=700;
  document.querySelector('#agent-mic').click();assert.equal(document.querySelector('.agent-dialog'),null);await new Promise(r=>setImmediate(r));assert.equal(starts,1);
  const count=stops;ui.park();ui.update({patient:p,tab:'medications',logged:true});assert.equal(stops,count);assert.equal(instance.active,true);assert.equal(document.querySelector('#care-agent').classList.contains('is-floating'),true);
  await instance.options.onTool('open_input',{mode:'attachment'},'file');assert.equal(document.querySelector('#agent-options').open,true);assert.ok(document.querySelector('input[type=file]'));

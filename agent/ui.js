@@ -46,7 +46,27 @@ export function mountCareAgent({data:D,getPatient,navigate,refresh,selectSandbox
   if(name!=='care_action')return {ok:false,message:'أداة غير مسموحة'};
   const key=currentKey;const result=await run(args,sessionKey+':'+id);if(currentKey===key)display(result);return result;
  }});
- function position(){const anchor=document.getElementById('agent-anchor');const floating=minimized||(!expanded&&(tab!=='today'||!anchor||anchor.getBoundingClientRect().bottom<70));host.classList.toggle('is-floating',floating);host.classList.toggle('is-expanded',expanded);$('#agent-expand').innerHTML=floating?expandIcon:minimizeIcon;$('#agent-expand').setAttribute('aria-label',floating?'توسيع المساعد':'تصغير المساعد');$('#agent-expand').title=floating?'توسيع المساعد':'تصغير المساعد مع استمرار المحادثة';}
+ // Reserve the full card's slot before fixing it to the viewport. Otherwise
+ // removing it from flow changes the scroll threshold and makes it jump.
+ let inlineHeight=0,scrollFloating=false;
+ function position(){
+  const anchor=document.getElementById('agent-anchor');
+  const detached=host.classList.contains('is-floating')||host.classList.contains('is-expanded');
+  if(!detached)inlineHeight=Math.max(80,host.getBoundingClientRect().height);
+  if(anchor&&detached)anchor.style.minHeight=inlineHeight+'px';
+  const bottom=anchor?.getBoundingClientRect().bottom;
+  if(bottom!==undefined){if(bottom<70)scrollFloating=true;else if(bottom>110)scrollFloating=false;}
+  const floating=!expanded&&(minimized||tab!=='today'||!anchor||scrollFloating);
+  if(anchor)anchor.style.minHeight=(floating||expanded?inlineHeight:80)+'px';
+  host.classList.toggle('is-floating',floating);host.classList.toggle('is-expanded',expanded);
+  const label=floating?'توسيع المساعد':'تصغير المساعد';
+  if($('#agent-expand').getAttribute('aria-label')!==label){
+   $('#agent-expand').innerHTML=floating?expandIcon:minimizeIcon;
+   $('#agent-expand').setAttribute('aria-label',label);
+   $('#agent-expand').title=floating?label:'تصغير المساعد مع استمرار المحادثة';
+  }
+ }
+
  async function start(textOnly=false){
   if(!D.user()){await selectSandbox();}
   if(!sessionAllowed()){card('اجرب عافية لتجربة الحديث');return;}
@@ -67,10 +87,11 @@ export function mountCareAgent({data:D,getPatient,navigate,refresh,selectSandbox
  }
  $('#agent-attach').onclick=()=>{if(sessionAllowed())expandInput('attachment');else card('اضغط جرب عافية أولا')};
  $('#agent-camera').onclick=async()=>{if(!sessionAllowed())return;stopCamera();const key=currentKey;const video=document.createElement('video');video.autoplay=true;video.playsInline=true;video.muted=true;video.style.width='100%';const close=document.createElement('button');close.textContent='إغلاق الكاميرا';close.onclick=stopCamera;$('#agent-input-area').append(video,close);try{const next=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});if(key!==currentKey||!video.isConnected){next.getTracks().forEach(t=>t.stop());return;}stream=next;video.srcObject=stream;card('الكاميرا للمعاينة المحلية فقط، الصورة لا ترسل للمساعد')}catch{stopCamera();card('تعذر تشغيل الكاميرا')}};
- window.addEventListener('scroll',position,{passive:true});window.addEventListener('pagehide',()=>{voice.stop();stopCamera()});
+ window.addEventListener('scroll',position,{passive:true});window.addEventListener('resize',position,{passive:true});
+ if(globalThis.ResizeObserver)new ResizeObserver(()=>{if(!host.classList.contains('is-floating')&&!host.classList.contains('is-expanded'))position()}).observe(host);window.addEventListener('pagehide',()=>{voice.stop();stopCamera()});
  return {park(){if(host.isConnected)document.body.append(host)},update({patient,tab:nextTab,logged,loading}){
   tab=nextTab;const key=logged?D.user()?.uid+':'+(patient?.id||''):'';
-  if(key!==currentKey){emergency.hidden=true;emergency.open=false;voice.stop();stopCamera();cancelReview?.();$('#agent-results').replaceChildren();$('#agent-transcript').replaceChildren();transcriptRow=null;transcriptRole='';expanded=false;minimized=false;currentKey=key;}
+  if(key!==currentKey){emergency.hidden=true;emergency.open=false;voice.stop();stopCamera();cancelReview?.();$('#agent-results').replaceChildren();$('#agent-transcript').replaceChildren();transcriptRow=null;transcriptRole='';expanded=false;minimized=false;scrollFloating=false;currentKey=key;}
   host.hidden=false;const anchor=document.getElementById('agent-anchor');if(anchor)anchor.append(host);
   $('#agent-person').textContent=patient?patient.name+' · '+(patient._example?'مثال تجريبي':'الملف المحدد'): 'جرب الحديث مع عافية';
   $('#agent-test').hidden=D.isAgentSandbox(patient);$('#agent-notice').textContent='';
