@@ -56,7 +56,7 @@ test("distinct scheduled slots are not duplicate danger", () => {
 });
 test("event time, registration time, actor and timezone are separate", () => {
   const s = new CareStore();
-  const r = run(s, "ahmed", "dose", { ...dose, occurredTime: "08:30" });
+  const r = run(s, "ahmed", "dose", { ...dose, occurredDate: day("Asia/Riyadh",new Date(Date.now()-86400000)), occurredTime: "08:30" });
   assert.equal(r.record.updatedById, "ahmed");
   assert.equal(r.record.timezone, "Asia/Riyadh");
   assert.notEqual(r.record.occurredAt, r.record.scheduledAt);
@@ -136,16 +136,16 @@ test("channel authorization and consent are independent; scheduler no external s
     channel: "email",
     enabled: true,
   });
-  s.tick();
+  s.tick(new Date(day()+"T23:59:00+03:00"));
   assert.equal(s.snapshot("reader", "sarah").notifications.length, 0);
   run(s, "reader", "consent", { channel: "email", consented: true });
-  s.tick();
+  s.tick(new Date(day()+"T23:59:00+03:00"));
   const ns = s.snapshot("reader", "sarah").notifications;
   assert.ok(ns.length > 0);
   assert.ok(
     ns.every((n) => n.status === "simulated" && !n.text.includes("سارة")),
   );
-  s.tick();
+  s.tick(new Date(day()+"T23:59:00+03:00"));
   assert.equal(s.snapshot("reader", "sarah").notifications.length, ns.length);
   assert.throws(() => run(s, "reader", "dose", dose));
 });

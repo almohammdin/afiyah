@@ -343,7 +343,7 @@
 #voice-state {font-size:22px}
 #agent-options {border-top:1px solid #cde3dc;padding-top:14px}
 #agent-options>summary {text-align:center;cursor:pointer;font-size:14px;padding:8px}
-#agent-options:not([open])~* {display:none}
+
 #care-agent [hidden] {display:none!important}
 #care-agent[data-voice="listening"] #agent-mic {box-shadow:0 0 0 calc(12px + var(--voice-level)*22px) #53b9aa33}
 @media(max-width:600px){#care-agent .agent-voice{margin:24px auto 20px}#care-agent #agent-mic{width:200px;height:200px}}
@@ -418,3 +418,9 @@
 }
 
 .agent-processing-note{text-align:center;font-size:12px;line-height:1.6;color:#49656c;margin:8px 0}
+
+#care-agent #agent-mic svg{stroke-linecap:round;stroke-linejoin:round}
+#care-agent [data-mini][hidden]{display:none!important}
+#care-agent.is-floating .agent-mini button{min-width:44px;min-height:44px}
+#care-agent #agent-mic:disabled{cursor:wait;opacity:.75}
+#care-agent.is-expanded{overscroll-behavior:contain}
