@@ -50,3 +50,15 @@ test('integrated UI keeps same voice instance while navigating and closes it on 
  window.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape'}));assert.equal(host.classList.contains('is-expanded'),false);
  p={...p,id:'real-patient',_example:false};ui.update({patient:p,tab:'today',logged:true});assert.equal(instance.active,false);assert.ok(stops>count);p=original;
 });
+test('mic selects the existing example once before starting, including repeated clicks',async()=>{
+ const {mountCareAgent}=await import('../agent/ui.js');
+ document.querySelector('#care-agent')?.remove();
+ let selected={id:'real',name:'ملف آخر'},selections=0,starts=0,release;
+ const gate=new Promise(r=>release=r),sample=D.createAgentSandbox();
+ class Voice{constructor(o){this.o=o;this.state='idle'}prepareAudio(){return {dispose(){}}}stop(){this.active=false;this.state='idle';this.o.onState('idle')}async start(){assert.equal(selected,sample);starts++;this.active=true;this.state='listening';this.o.onState('listening')}}
+ let ui;ui=mountCareAgent({data:D,getPatient:()=>selected,navigate(){},refresh:async()=>{},selectSandbox:async()=>{selections++;await gate;selected=sample;ui.update({patient:selected,tab:'today',logged:true})},Voice,voiceEnabled:true});
+ ui.update({patient:selected,tab:'today',logged:true});
+ const mic=document.querySelector('#agent-mic');mic.click();mic.click();mic.click();
+ assert.equal(selections,1);assert.equal(starts,0);release();await new Promise(r=>setImmediate(r));
+ assert.equal(starts,1);assert.equal(document.querySelectorAll('#agent-results article').length,0);assert.equal((await D.patients()).length,1);
+});

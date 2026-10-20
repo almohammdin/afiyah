@@ -80,14 +80,20 @@ export function mountCareAgent({data:D,getPatient,navigate,refresh,selectSandbox
   }
  }
 
+ let starting=false;
  async function start(textOnly=false){
+  if(starting)return false;
+  starting=true;
+  try{return await startSession(textOnly)}finally{starting=false}
+ }
+ async function startSession(textOnly=false){
   if(['permission','connecting'].includes(voice.state))return false;
   let prepared;
   try{
-   if(!textOnly&&!voice.active&&voiceEnabled&&(!D.user()||sessionAllowed()))prepared=voice.prepareAudio?.();
-   if(!D.user()){await selectSandbox();}
+   if(!textOnly&&!voice.active&&voiceEnabled)prepared=voice.prepareAudio?.();
+   if(!D.user()||(!textOnly&&!sessionAllowed())){await selectSandbox();}
   }catch{prepared?.dispose();$('#agent-notice').textContent='تعذر تجهيز الميكروفون، أعد المحاولة';return false;}
-  if(!sessionAllowed()){prepared?.dispose();card('المحادثة متاحة حاليا مع ملف سارة، اختر جرب عافية');return;}
+  if(!sessionAllowed()){prepared?.dispose();$('#agent-notice').textContent='اختر ملف سارة لبدء المحادثة';return false;}
   if(voice.active&&(!voice.textOnly||textOnly)){if(textOnly)return true;voice.stop();return false;}if(voice.active)voice.stop();
   if(!voiceEnabled){$('#agent-notice').textContent='تفعيل المحادثة الصوتية بانتظار اعتماد ربط الاختبار';return;}
   if(!sessionAllowed())return;$('#agent-notice').textContent='';sessionKey=operationId();
