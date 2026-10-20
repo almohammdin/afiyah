@@ -32,7 +32,7 @@ test('diagnostics distinguish remote interruption and turn completion without re
  live.active=true;live.session={close(){}};
  live.message({serverContent:{interrupted:true,inputTranscription:{text:'synthetic private text'}}},live.generation);
  live.message({serverContent:{turnComplete:true}},live.generation);
- assert.deepEqual(events.map(e=>e.kind),['remote-interruption','turn-complete']);
+ assert.deepEqual(events.map(e=>e.kind),['remote-interruption','local-interruption','turn-complete']);
  assert.equal(JSON.stringify(events).includes('synthetic private text'),false);live.stop();
 });
 test('output audio buffers first chunk and queues later chunks continuously',()=>{

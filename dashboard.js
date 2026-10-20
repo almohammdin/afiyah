@@ -1,4 +1,4 @@
-import {doses} from './domain.js?v=20261014-unified';
+import {doses} from './domain.js?v=20261020-session-fix';
 export const shiftDate=(s,n)=>{const d=new Date(s+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
 export const monthStart=s=>s.slice(0,7)+'-01';
 export function shiftMonth(s,n){const d=new Date(monthStart(s)+'T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+n);return d.toISOString().slice(0,10);}

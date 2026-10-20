@@ -1,8 +1,8 @@
-import {operationId} from './id.js';
-import {LiveVoice,liveInstruction,liveTools} from './live.js?v=20261020-audio-stability';
-import {createCareTools,careDeclaration} from './tools.js';
-import {connection,getLiveToken,checkVoiceConnection} from './connection.js?v=20261018-chat';
-import {safety} from './safety.js?v=20261020-review';
+import {operationId} from './id.js?v=20261020-session-fix';
+import {LiveVoice,liveInstruction,liveTools} from './live.js?v=20261020-session-fix';
+import {createCareTools,careDeclaration} from './tools.js?v=20261020-session-fix';
+import {connection,getLiveToken,checkVoiceConnection} from './connection.js?v=20261020-session-fix';
+import {safety} from './safety.js?v=20261020-session-fix';
 const mic='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg>';
 const icon=path=>`<svg class="agent-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
 const minimizeIcon=icon('<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 15h6"/>');
@@ -32,7 +32,7 @@ export function mountCareAgent({data:D,getPatient,navigate,refresh,selectSandbox
  function expandInput(mode){$('#agent-options').open=true;expanded=true;minimized=false;position();if(mode==='attachment')attach();else if(mode==='camera'){card('اضغط تشغيل الكاميرا عندما تكون جاهزا');$('#agent-camera').focus();}else $('#agent-input').focus();}
  const labels={idle:'تحدث مع عافية',permission:'بانتظار إذن الميكروفون',connecting:'أتصل بمساعد عافية',listening:'أسمعك الآن',speaking:'عافية يتحدث',muted:'الميكروفون مكتوم',processing:'أنفذ طلبك',failed:'تعذر الاتصال',writing:'جاهز لرسالتك',ended:'انتهت الجلسة'};
  const voiceEvents=[];
- const voice=new Voice({onDiagnostic:event=>{voiceEvents.push(event);if(voiceEvents.length>30)voiceEvents.shift();},getToken:getLiveToken,tools:[careDeclaration,liveTools.find(t=>t.name==='open_input')],instruction:liveInstruction.replaceAll('care_request','care_action')+'\nاستخدم action وحقول الأداة المنظمة، وليس أوامر نصية ثابتة. الملف الوحيد المسموح سارة الافتراضية. استرجع الأدوية للحصول على المعرف قبل توثيق الجرعة. عند غموض الوقت اسأل. لا تدع أن الكاميرا أو المستند مرئيان لك، لا تصلك الصور في هذا الاختبار.',
+ const voice=new Voice({onDiagnostic:event=>{if(event.kind==='session-start')voiceEvents.length=0;voiceEvents.push(event);if(voiceEvents.length>30)voiceEvents.shift();},getToken:getLiveToken,tools:[careDeclaration,liveTools.find(t=>t.name==='open_input')],instruction:liveInstruction.replaceAll('care_request','care_action')+'\nاستخدم action وحقول الأداة المنظمة، وليس أوامر نصية ثابتة. الملف الوحيد المسموح سارة الافتراضية. استرجع الأدوية للحصول على المعرف قبل توثيق الجرعة. عند غموض الوقت اسأل. لا تدع أن الكاميرا أو المستند مرئيان لك، لا تصلك الصور في هذا الاختبار.',
  onState:state=>{
   host.dataset.voice=state;$('#voice-state').textContent=labels[state]||state;$('.mini-state').textContent=labels[state]||state;
   const pending=['permission','connecting'].includes(state),ready=['listening','speaking','muted','processing','writing'].includes(state);
@@ -83,6 +83,7 @@ export function mountCareAgent({data:D,getPatient,navigate,refresh,selectSandbox
   if(['permission','connecting'].includes(voice.state))return false;
   let prepared;
   try{
+   if(!textOnly&&!voice.active&&D.user()&&getPatient()&&!sessionAllowed()&&!globalThis.confirm('بدء المحادثة في مثال سارة؟ يمكنك العودة لملفك دون تسجيل خروج'))return false;
    if(!textOnly&&!voice.active&&voiceEnabled)prepared=voice.prepareAudio?.();
    if(!D.user()||(!textOnly&&!sessionAllowed())){await selectSandbox();}
   }catch{prepared?.dispose();$('#agent-notice').textContent='تعذر تجهيز الميكروفون، أعد المحاولة';return false;}
@@ -95,7 +96,7 @@ export function mountCareAgent({data:D,getPatient,navigate,refresh,selectSandbox
  $('#agent-mic').onclick=()=>start();$('#voice-mute').onclick=()=>voice.mute();$('#voice-interrupt').onclick=()=>voice.interrupt();$('#voice-stop').onclick=()=>{voice.stop();stopCamera();cancelReview?.()};
  for(const b of host.querySelectorAll('[data-mini]'))b.onclick=()=>$('#'+b.dataset.mini).click();
  $('#agent-expand').onclick=()=>{expanded=host.classList.contains('is-floating');minimized=!expanded;position()};$('#mini-mic').onclick=()=>{expanded=true;minimized=false;position()};
- $('#agent-check').onclick=async()=>{if(voiceEvents.length){const names={'session-start':'بدء الاتصال','remote-interruption':'مقاطعة رصدتها خدمة الصوت','connection-error':'خطأ اتصال','connection-closed':'إغلاق الاتصال','turn-complete':'اكتمال الرد من الخدمة','playback-start':'تشغيل الصوت'};$('#agent-notice').textContent=voiceEvents.slice(-6).map(e=>(names[e.kind]||e.kind)+(e.code?' ('+e.code+')':'')).join(' ← ');return;}const button=$('#agent-check');button.disabled=true;$('#agent-notice').textContent='أفحص الاتصال';try{await checkVoiceConnection();$('#agent-notice').textContent='نجح التحقق وإصدار رمز الاتصال، جرب الميكروفون الآن'}catch(error){$('#agent-notice').textContent=error.message}finally{button.disabled=false}};
+ $('#agent-check').onclick=async()=>{if(voiceEvents.length){const names={'session-start':'بدء الاتصال','remote-interruption':'مقاطعة رصدتها خدمة الصوت','connection-error':'خطأ اتصال','connection-closed':'إغلاق الاتصال','turn-complete':'اكتمال الرد من الخدمة','playback-start':'تشغيل الصوت','local-interruption':'إيقاف التشغيل داخل الصفحة','microphone-ended':'توقف الميكروفون من المتصفح','audio-suspended':'المتصفح علق تشغيل الصوت'};$('#agent-notice').textContent=voiceEvents.slice(-6).map(e=>(names[e.kind]||e.kind)+(e.code?' ('+e.code+')':'')).join(' ← ');return;}const button=$('#agent-check');button.disabled=true;$('#agent-notice').textContent='أفحص الاتصال';try{await checkVoiceConnection();$('#agent-notice').textContent='نجح التحقق وإصدار رمز الاتصال، جرب الميكروفون الآن'}catch(error){$('#agent-notice').textContent=error.message}finally{button.disabled=false}};
  $('#agent-test').onclick=async()=>{voice.stop();await selectSandbox();document.getElementById('agent-anchor')?.scrollIntoView({block:'start'});};
  $('#agent-form').onsubmit=async e=>{e.preventDefault();const text=$('#agent-input').value.trim();if(!text)return;const risk=safety(text,country());if(risk){card([risk.message,risk.question,risk.advice].filter(Boolean).join(' · '));if(risk.kind==='urgent'){emergency.hidden=false;emergency.open=true;expanded=true;minimized=false;position();return;}}const button=$('#agent-form button');button.disabled=true;try{if(!voice.active&&!await start(true))return;if(!sessionAllowed())return;voice.sendText(text);const row=document.createElement('p');row.textContent='أنت: '+text;$('#agent-transcript').append(row);transcriptRow=null;transcriptRole='';$('#agent-input').value=''}catch(err){card(err.message)}finally{button.disabled=false}};
 
@@ -109,7 +110,7 @@ export function mountCareAgent({data:D,getPatient,navigate,refresh,selectSandbox
  window.addEventListener('pagehide',()=>{voice.stop();stopCamera()});
  return {park(){},update({patient,tab:nextTab,logged,loading}){
   tab=nextTab;const key=logged?D.user()?.uid+':'+(patient?.id||''):'';
-  if(key!==currentKey){$('#agent-notice').textContent='';emergency.hidden=true;emergency.open=false;voice.stop();stopCamera();cancelReview?.();$('#agent-results').replaceChildren();$('#agent-transcript').replaceChildren();transcriptRow=null;transcriptRole='';currentKey=key;}
+  if(key!==currentKey){voiceEvents.length=0;$('#agent-notice').textContent='';emergency.hidden=true;emergency.open=false;voice.stop();stopCamera();cancelReview?.();$('#agent-results').replaceChildren();$('#agent-transcript').replaceChildren();transcriptRow=null;transcriptRole='';currentKey=key;}
   host.hidden=false;
   $('#agent-person').textContent=patient?patient.name+' · '+(patient._example?'مثال تجريبي':'الملف المحدد'): '';
   $('#agent-test').hidden=!patient||D.isAgentSandbox(patient);

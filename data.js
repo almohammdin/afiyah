@@ -1,9 +1,9 @@
-import {operationId} from './agent/id.js';
-import {makeExample} from './example-patient.js?v=20261018-rich-example';
-import {localInstant,recordable,eventWarnings,zones} from './care-time.js';
-import {config} from './config.js';
-import {sections,day,validate,slotId,doseWarnings,active} from './domain.js?v=20261014-care-fixes';
-let sdk,db,auth,person=null,demo=false,mem,initPromise,memOwner;
+import {operationId} from './agent/id.js?v=20261020-session-fix';
+import {makeExample} from './example-patient.js?v=20261020-session-fix';
+import {localInstant,recordable,eventWarnings,zones} from './care-time.js?v=20261020-session-fix';
+import {config} from './config.js?v=20261020-session-fix';
+import {sections,day,validate,slotId,doseWarnings,active} from './domain.js?v=20261020-session-fix';
+let sdk,db,auth,person=null,demo=false,mem,initPromise,memOwner,account=null,notifyAuth=()=>{};
 export const user=()=>person;
 export const isDemo=()=>demo;
 let agentSandboxId=null,agentSandboxOwner=null;
@@ -27,9 +27,31 @@ function unpack(d){const out={...d.data(),id:d.id};for(const [k,v]of Object.entr
 async function list(c,filters=[]){let out=[],last;for(;;){const q=sdk.query(c,...filters,sdk.orderBy(sdk.documentId()),...(last?[sdk.startAfter(last)]:[]),sdk.limit(200));const page=await sdk.getDocs(q);out.push(...page.docs.map(unpack));if(page.size<200)return out;last=page.docs.at(-1);}}
 export const owner=p=>p.ownerId===uid();
 export const can=(p,s,write=false)=>!p.deleting&&(owner(p)||p.grant?.[write?'editSections':'readSections']?.includes(s==='doseEvents'?'medications':s));
-export async function init(callback){if(initPromise)return initPromise;initPromise=(async()=>{const [a,b,c]=await Promise.all(['app','auth','firestore'].map(x=>import(`https://www.gstatic.com/firebasejs/11.10.0/firebase-${x}.js`)));sdk={...b,...c};const app=a.initializeApp(config.firebase,'afiyah');auth=b.getAuth(app);await b.setPersistence(auth,b.browserSessionPersistence);db=c.initializeFirestore(app,{localCache:c.memoryLocalCache()});b.onAuthStateChanged(auth,u=>{if(demo)return;person=u;callback(u);});})();return initPromise;}
-export async function login(){await initPromise;if(!auth)throw Error('تعذر تجهيز الدخول، أعد المحاولة');demo=false;await sdk.signInWithPopup(auth,new sdk.GoogleAuthProvider());}
-export async function logout(){if(demo){demo=false;person=null;mem=null;if(auth)await sdk.signOut(auth);}else await sdk.signOut(auth);}
+export async function init(callback,loadModule=x=>import(`https://www.gstatic.com/firebasejs/11.10.0/firebase-${x}.js`)){
+ if(initPromise)return initPromise;
+ notifyAuth=callback;
+ initPromise=(async()=>{
+  const [a,b,c]=await Promise.all(['app','auth','firestore'].map(loadModule));sdk={...b,...c};
+  const app=a.initializeApp(config.firebase,'afiyah');auth=b.getAuth(app);
+  await b.setPersistence(auth,b.browserSessionPersistence);
+  db=c.initializeFirestore(app,{localCache:c.memoryLocalCache()});
+  await new Promise((resolve,reject)=>b.onAuthStateChanged(auth,u=>{
+   account=u;if(!demo){person=u;notifyAuth(u);}resolve();
+  },reject));
+ })();return initPromise;
+}
+export async function login(){
+ await initPromise;if(!auth)throw Error('تعذر تجهيز الدخول، أعد المحاولة');
+ const result=await sdk.signInWithPopup(auth,new sdk.GoogleAuthProvider());
+ account=result.user;demo=false;person=account;notifyAuth(person);
+}
+export function leaveDemo(){demo=false;person=account;mem=null;memOwner=null;notifyAuth(person);}
+export async function logout(){if(demo){leaveDemo();return;}if(auth)await sdk.signOut(auth);}
+export function restoreExample(){
+ const sample=createAgentSandbox();
+ try{window.localStorage.removeItem('afiyah-example-removed:'+uid());}catch{}
+ return sample;
+}
 function ensureExample(){
  if(memOwner===uid()&&mem)return;
  memOwner=uid();mem={patients:[],members:[],entries:{}};
@@ -44,7 +66,7 @@ export async function accept(m){if(demo){m.status='active';m.memberUid=uid();ret
 export async function share(p,value){if(p._example)throw Error('المشاركة متاحة لملفاتك الفعلية');if(!owner(p))throw Error('إدارة المشاركة متاحة لصاحب الملف');const e=value.email.trim().toLowerCase();if(e===email())throw Error('هذا حساب صاحب الملف');if(!/^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/.test(e))throw Error('البريد غير صحيح');const id=p.id+'_'+e;const payload={...value,email:e,patientId:p.id,patientName:p.name,ownerId:uid()};if(local(p)){const old=mem.members.find(m=>m.id===id);if(old)Object.assign(old,payload);else mem.members.push({...payload,id,status:'pending',memberUid:''});return;}
  await sdk.runTransaction(db,async tx=>{const r=ref(grantsFor(p),id),snap=await tx.get(r);const old=snap.exists()?snap.data():null;const next={...payload,status:old?.status||'pending'};if(!p._legacy||old?.memberUid!==undefined)next.memberUid=old?.memberUid||'';tx.set(r,next);});}
 export async function revoke(p,m){if(!owner(p)&&m.email!==email())throw Error('ليس لديك صلاحية');if(local(p)){mem.members=mem.members.filter(x=>x.id!==m.id);return;}await sdk.deleteDoc(ref(grantsFor(p),m.id));}
-export async function createPatient(v){const p={name:v.name.trim(),relation:v.relation||'',timezone:v.timezone||'Asia/Riyadh',basis:v.basis,policyVersion:'2026-10-14',ownerId:uid(),deleting:false,createdAt:stamp()};if(!p.name||p.name.length>120)throw Error('تحقق من اسم المريض');if(!['self','consent','guardian','representative'].includes(p.basis))throw Error('حدد صفتك في إدارة الملف');const id=uuid();if(demo){mem.patients.push({...p,id});mem.entries[id]=Object.fromEntries([...sections,'safety','doseEvents','doseGuards','audit'].map(x=>[x,[]]));}else await sdk.setDoc(ref(root,id),p);return {...p,id};}
+export async function createPatient(v){if(demo||!person)throw Error('سجل الدخول لحفظ ملف المريض');const p={name:v.name.trim(),relation:v.relation||'',timezone:v.timezone||'Asia/Riyadh',basis:v.basis,policyVersion:'2026-10-14',ownerId:uid(),deleting:false,createdAt:stamp()};if(!p.name||p.name.length>120)throw Error('تحقق من اسم المريض');if(!['self','consent','guardian','representative'].includes(p.basis))throw Error('حدد صفتك في إدارة الملف');const id=uuid();if(demo){mem.patients.push({...p,id});mem.entries[id]=Object.fromEntries([...sections,'safety','doseEvents','doseGuards','audit'].map(x=>[x,[]]));}else await sdk.setDoc(ref(root,id),p);return {...p,id};}
 export async function load(p){const out={};await Promise.all([...sections,'doseEvents','audit'].map(async s=>{const permitted=s==='audit'?owner(p):can(p,s==='doseEvents'?'medications':s);out[s]=permitted?(local(p)?mem.entries[p.id][s]:await list(col(rootFor(p),p.id,s))):[];}));
  if(p._legacy){for(const section of ['medications','appointments','tasks','reports'])out[section]=out[section].map(r=>normalizeLegacy(section,r));if(owner(p)&&!out.profile.length)out.profile=[{id:'health',name:'الملف الصحي',revision:0,allergyStatus:p.allergies?'known':'unknown',allergies:p.allergies||'',conditions:p.conditions||'',birthYear:p.birthYear||'',blood:p.blood||'',emergencyName:'',emergencyPhone:'',hospitalFiles:[]}];for(const med of out.medications){const raw=med.legacyRecord;if(!raw)continue;for(const date of raw.takenDates||[]){const id=slotId(med.id,date,raw.time);if(!out.doseEvents.some(x=>x.id===id))out.doseEvents.push({id,medId:med.id,name:med.name,day:date,time:raw.time,status:'given',imported:true,reason:'تسجيل محفوظ',updatedAt:raw.updatedAt||'',revision:0});}}}
  if(can(p,'medications')){if(local(p))out.safety=out.profile[0]||null;else{const safe=await sdk.getDoc(ref(rootFor(p),p.id,'safety','allergies'));out.safety=safe.exists()?unpack(safe):(owner(p)?out.profile[0]:null);}}

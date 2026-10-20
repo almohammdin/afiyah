@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {day,times,latin,validDate,duplicates,doseWarnings,doses} from '../domain.js';
 import * as d from '../data.js';
-async function fixture(){d.startDemo();const p=await d.createPatient({name:'Test patient',relation:'self',basis:'self',timezone:'Asia/Riyadh'});await d.save(p,'medications',{name:'Test medicine',dose:'test',ingredient:'',times:['08:00','20:00'],start:day(p.timezone),end:'',status:'active',minHours:0,maxPerDay:0});return p;}
+async function fixture(){await d.logout();d.startDemo();const p=d.createAgentSandbox();const entries=await d.load(p);for(const rows of Object.values(entries))if(Array.isArray(rows))rows.length=0;p._example=false;await d.save(p,'medications',{name:'Test medicine',dose:'test',ingredient:'',times:['08:00','20:00'],start:day(p.timezone),end:'',status:'active',minHours:0,maxPerDay:0});return p;}
 
 test('Latin digits, dates and patient timezone',()=>{assert.equal(latin('٢٠٢٦ ۱۴'),'2026 14');assert.equal(day('Asia/Riyadh',new Date('2026-10-14T22:00:00Z')),'2026-10-15');assert.equal(validDate('2026-02-30'),false);assert.deepEqual(times('08:00، ٢٠:٠٠ 08:00'),['08:00','20:00']);assert.throws(()=>times('25:00'));});
 test('prescription limits and duplicates',()=>{const m={name:' Test ',ingredient:'abc',minHours:6,maxPerDay:2};assert.equal(duplicates(m,[{id:'b',name:'other',ingredient:'ABC',status:'active'}]).length,1);assert.equal(doseWarnings(m,{lastGivenAt:'2026-10-14T10:00:00Z',day:'2026-10-14',count:2},'2026-10-14',Date.parse('2026-10-14T11:00:00Z')).length,2);});

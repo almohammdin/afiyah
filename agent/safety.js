@@ -1,6 +1,6 @@
-import {normalize} from '../domain.js';
+import {normalize} from '../domain.js?v=20261020-session-fix';
 export function safety(text, country) {
-  const t = normalize(text).replace(/[أإآ]/g, "ا");
+  const t = normalize(text).replace(/[أإآ]/g, "ا").replace(/ة/g, "ه");
   if (
     /(?:^|[^\p{L}])(?:الم|وجع)(?:[^\p{L}].*)?صدر|ضيق.*(نفس|تنفس)|صعوب.*تنفس|فقد.*وعي|فاقد.*وعي|نزيف.*شديد|جرعه.*زائد|جرعات.*زائد/u.test(
       t,

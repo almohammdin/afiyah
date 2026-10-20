@@ -1,4 +1,4 @@
-import {active,day,latin,validDate} from './domain.js';
+import {active,day,latin,validDate} from './domain.js?v=20261020-session-fix';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function reportSnapshot(patient,entries,allowed){
  const out={patient:{name:patient.name,timezone:patient.timezone,_example:!!patient._example},entries:{}};

@@ -1,5 +1,5 @@
-import {operationId} from './id.js';
-import {day,sections,slotId} from '../domain.js';
+import {operationId} from './id.js?v=20261020-session-fix';
+import {day,sections,slotId} from '../domain.js?v=20261020-session-fix';
 const clone=x=>structuredClone(x);
 const fields=['id','name','dose','ingredient','times','start','end','status','date','time','place','doctor','notes','kind','revision','medId','day','occurredAt'];
 const publicRow=row=>Object.fromEntries(fields.filter(k=>Object.hasOwn(row,k)).map(k=>[k,row[k]]));

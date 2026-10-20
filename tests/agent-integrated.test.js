@@ -62,7 +62,7 @@ test('mic selects the existing example once before starting, including repeated 
  class Voice{constructor(o){this.o=o;this.state='idle'}prepareAudio(){return {dispose(){}}}stop(){this.active=false;this.state='idle';this.o.onState('idle')}async start(){assert.equal(selected,sample);starts++;this.active=true;this.state='listening';this.o.onState('listening')}}
  let ui;ui=mountCareAgent({data:D,getPatient:()=>selected,navigate(){},refresh:async()=>{},selectSandbox:async()=>{selections++;await gate;selected=sample;ui.update({patient:selected,tab:'today',logged:true})},Voice,voiceEnabled:true});
  ui.update({patient:selected,tab:'today',logged:true});
- const mic=document.querySelector('#agent-mic');mic.click();mic.click();mic.click();
+ const mic=document.querySelector('#agent-mic');globalThis.confirm=()=>false;mic.click();await new Promise(r=>setImmediate(r));assert.equal(selections,0);globalThis.confirm=()=>true;mic.click();mic.click();mic.click();
  assert.equal(selections,1);assert.equal(starts,0);release();await new Promise(r=>setImmediate(r));
  assert.equal(starts,1);assert.equal(document.querySelectorAll('#agent-results article').length,0);assert.equal((await D.patients()).length,1);
 });

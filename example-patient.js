@@ -1,6 +1,6 @@
-import {day,slotId} from './domain.js';
-import {shiftDate} from './dashboard.js';
-import {localInstant} from './care-time.js';
+import {day,slotId} from './domain.js?v=20261020-session-fix';
+import {shiftDate} from './dashboard.js?v=20261020-session-fix';
+import {localInstant} from './care-time.js?v=20261020-session-fix';
 
 // Entirely fictional content, generated relative to the first visit so the calendar is useful.
 export function makeExample(ownerId,now=new Date()){

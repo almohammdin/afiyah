@@ -1,5 +1,5 @@
-import {ConversationScreen} from './screen-awake.js?v=20261020-timers';
-import { persona } from './policy.js';
+import {ConversationScreen} from './screen-awake.js?v=20261020-session-fix';
+import { persona } from './policy.js?v=20261020-session-fix';
 
 export const liveInstruction = `${persona}
 أنت مساعد عافية الصوتي. تكلم بلهجة سعودية طبيعية لطيفة وهادئة، بجمل قصيرة وسؤال واحد عند نقص المعلومات. لا تبدأ كل رد بتحية ولا تقرأ الواجهة كلها. انطق أسماء الأدوية والتركيزات والأوقات ببطء، ولا تخمن كلمة غير واضحة. هذه جلسة اختبار بملفات افتراضية فقط، اطلب عدم ذكر معلومات شخصية أو صحية حقيقية.
@@ -44,7 +44,8 @@ export class LiveVoice {
    try{[stream]=await Promise.race([Promise.all([media,resumed]),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Object.assign(Error('permission-timeout'),{name:'TimeoutError'})),15000)})]);}finally{clearTimeout(timer)}
    if(!stream)return;
    if(generation!==this.generation){stream.getTracks().forEach(t=>t.stop());return;}
-   this.stream=stream;this.stream.getTracks().forEach(t=>t.onended=()=>this.stop());
+   this.stream=stream;this.stream.getTracks().forEach(t=>t.onended=()=>{this.diagnostic('microphone-ended');this.stop();});
+   this.context.onstatechange=()=>{if(this.active&&this.context?.state==='suspended')this.diagnostic('audio-suspended');};
    }
    this.set('connecting');
    const [token,sdk]=await Promise.all([this.getToken(),this.loadSdk()]);
@@ -94,6 +95,6 @@ export class LiveVoice {
   this.screen.activity();const first=!this.sources.size;if(first)this.diagnostic('playback-start');this.sources.add(source);this.nextTime=Math.max(this.context.currentTime+(first ? 0.08 : 0),this.nextTime||0);source.start(this.nextTime);this.nextTime+=buffer.duration;this.set('speaking');
  }
  mute(){if(!this.active||!this.session||this.textOnly)return;this.muted=!this.muted;this.stream?.getTracks().forEach(t=>t.enabled=!this.muted);if(this.muted)this.session?.sendRealtimeInput({audioStreamEnd:true});this.set(this.muted?'muted':this.active?'listening':'idle');}
- interrupt(){if(this.active&&!this.session)return;this.dropAudio=true;for(const source of this.sources){source.onended=null;try{source.stop();source.disconnect()}catch{}}this.sources.clear();this.nextTime=this.context?.currentTime||0;this.set(this.active?(this.textOnly?'writing':this.muted?'muted':'listening'):'idle');}
+ interrupt(){if(this.active&&!this.session)return;this.diagnostic('local-interruption');this.dropAudio=true;for(const source of this.sources){source.onended=null;try{source.stop();source.disconnect()}catch{}}this.sources.clear();this.nextTime=this.context?.currentTime||0;this.set(this.active?(this.textOnly?'writing':this.muted?'muted':'listening'):'idle');}
  stop(){this.screen.stop();++this.generation;this.active=false;this.interrupt();const session=this.session;this.session=null;try{session?.close()}catch{};if(this.processor)this.processor.onaudioprocess=null;for(const node of [this.source,this.processor,this.silent])try{node?.disconnect()}catch{};this.stream?.getTracks().forEach(t=>{t.onended=null;t.stop()});this.stream=null;this.context?.close().catch(()=>{});this.context=null;this.calls.clear();this.muted=false;this.set('idle');}
 }
