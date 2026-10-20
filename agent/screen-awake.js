@@ -1,6 +1,6 @@
 // Best-effort screen wake lock, scoped to an active voice session.
 export class ConversationScreen {
- constructor({nav=globalThis.navigator,doc=globalThis.document,now=Date.now,schedule=setTimeout,cancel=clearTimeout,idleMs=60000}={}){
+ constructor({nav=globalThis.navigator,doc=globalThis.document,now=Date.now,schedule=(fn,ms)=>globalThis.setTimeout(fn,ms),cancel=id=>globalThis.clearTimeout(id),idleMs=60000}={}){
   Object.assign(this,{nav,doc,now,schedule,cancel,idleMs});this.active=false;this.lock=null;this.pending=false;this.timer=null;this.lastAttempt=-Infinity;
   this.visibility=()=>{if(this.doc.visibilityState!=='visible')this.release();else if(this.wanted())void this.acquire()};
  }

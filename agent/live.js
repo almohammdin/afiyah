@@ -1,4 +1,4 @@
-import {ConversationScreen} from './screen-awake.js';
+import {ConversationScreen} from './screen-awake.js?v=20261020-timers';
 import { persona } from './policy.js';
 
 export const liveInstruction = `${persona}
