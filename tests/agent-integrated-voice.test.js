@@ -9,7 +9,7 @@ test('integrated live transport starts, sends structured tools, mutes and releas
  const remote={close(){},sendRealtimeInput:m=>messages.push(m),sendToolResponse:m=>messages.push(m),sendClientContent:m=>messages.push(m)};
  const loadSdk=async()=>({GoogleGenAI:class{constructor(options){clientOptions=options;this.live={connect:async opts=>{config=opts.config;callbacks=opts.callbacks;return remote}}}}});
  const live=new LiveVoice({getToken:async()=>'synthetic-test-token',loadSdk,tools:[{name:'care_action'}],onTool:async()=>({ok:true,persisted:true})});
- await live.start();assert.equal(clientOptions.httpOptions.apiVersion,'v1beta');assert.equal(live.state,'listening');assert.equal(config.tools[0].functionDeclarations[0].name,'care_action');
+ await live.start();assert.equal(clientOptions.httpOptions.apiVersion,'v1beta');assert.equal(live.state,'listening');assert.equal(config.tools[0].functionDeclarations[0].name,'care_action');assert.equal(config.realtimeInputConfig.automaticActivityDetection.startOfSpeechSensitivity,'START_SENSITIVITY_LOW');
  live.mute();assert.equal(track.enabled,false);live.mute();assert.equal(track.enabled,true);
  live.sendText('افتح الأدوية');assert.equal(messages.at(-1).turnComplete,true);
  live.interrupt();assert.equal(live.state,'listening');live.stop();assert.equal(stopped,1);assert.equal(closed,1);assert.equal(live.active,false);
@@ -25,4 +25,19 @@ test('writing connects without microphone and never plays received audio (mocked
  const live=new LiveVoice({getToken:async()=>'synthetic',loadSdk});await live.start({textOnly:true});assert.equal(live.state,'writing');assert.equal(live.context,undefined);
  live.play=()=>{throw Error('must not play audio')};callbacks.onmessage({serverContent:{modelTurn:{parts:[{inlineData:{data:'AAA='}}]},turnComplete:true}});
  live.sendText('افتح الأدوية');assert.equal(sent.turns[0].parts[0].text,'افتح الأدوية');assert.equal(live.state,'writing');live.stop();assert.equal(live.active,false);
+});
+
+test('diagnostics distinguish remote interruption and turn completion without recording transcript',()=>{
+ const events=[];const live=new LiveVoice({onDiagnostic:e=>events.push(e)});
+ live.active=true;live.session={close(){}};
+ live.message({serverContent:{interrupted:true,inputTranscription:{text:'synthetic private text'}}},live.generation);
+ live.message({serverContent:{turnComplete:true}},live.generation);
+ assert.deepEqual(events.map(e=>e.kind),['remote-interruption','turn-complete']);
+ assert.equal(JSON.stringify(events).includes('synthetic private text'),false);live.stop();
+});
+test('output audio buffers first chunk and queues later chunks continuously',()=>{
+ const scheduled=[];const live=new LiveVoice();live.active=true;
+ live.context={currentTime:1,createBuffer:()=>({duration:.1,getChannelData:()=>new Float32Array(1)}),createBufferSource:()=>({connect(){},start:t=>scheduled.push(t),stop(){},disconnect(){}}),close:async()=>{}};
+ live.play('AAA=');live.play('AAA=');
+ assert.equal(scheduled[0],1.08);assert.ok(Math.abs(scheduled[1]-1.18)<.00001);live.stop();
 });

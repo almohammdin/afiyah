@@ -12,10 +12,11 @@ export function pcm16(input, rate) {
  return out;
 }
 export class LiveVoice {
- constructor({onState=()=>{},onLevel=()=>{},onText=()=>{},onTool=async()=>({ok:false}),getToken,tools=liveTools,instruction=liveInstruction,loadSdk=()=>import('https://cdn.jsdelivr.net/npm/@google/genai@2.14.0/+esm')}={}) {
-  Object.assign(this,{onState,onLevel,onText,onTool,getToken,tools,instruction,loadSdk}); this.screen=new ConversationScreen();this.generation=0;this.state='idle';this.muted=false;this.sources=new Set();this.calls=new Map();
+ constructor({onState=()=>{},onLevel=()=>{},onText=()=>{},onTool=async()=>({ok:false}),onDiagnostic=()=>{},getToken,tools=liveTools,instruction=liveInstruction,loadSdk=()=>import('https://cdn.jsdelivr.net/npm/@google/genai@2.14.0/+esm')}={}) {
+  Object.assign(this,{onState,onLevel,onText,onTool,onDiagnostic,getToken,tools,instruction,loadSdk}); this.screen=new ConversationScreen();this.generation=0;this.state='idle';this.muted=false;this.sources=new Set();this.calls=new Map();
  }
  set(value){this.state=value;this.onState(value);}
+ diagnostic(kind,code){this.onDiagnostic({kind,...(Number.isInteger(code)?{code}:{}),at:Date.now()});}
  sendText(text){if(!this.active||!this.session)throw Error("ابدأ الاتصال الصوتي أولا");this.session.sendClientContent({turns:[{role:"user",parts:[{text}]}],turnComplete:true});}
  prepareAudio(){
   const AC=globalThis.AudioContext||globalThis.webkitAudioContext;
@@ -27,7 +28,7 @@ export class LiveVoice {
  async start({textOnly=false,prepared}={}){
   if(this.active)return;
   if(!this.getToken)throw Error('يلزم اعتماد رابط معاينة عافية في خدمة إصدار رمز الصوت');
-  const generation=++this.generation;this.active=true;this.muted=false;this.dropAudio=false;this.textOnly=textOnly;this.set(textOnly?'connecting':'permission');
+  const generation=++this.generation;this.active=true;this.muted=false;this.dropAudio=false;this.textOnly=textOnly;this.diagnostic('session-start');this.set(textOnly?'connecting':'permission');
   try {
    let stream;
    if(!textOnly){
@@ -49,7 +50,7 @@ export class LiveVoice {
    const [token,sdk]=await Promise.all([this.getToken(),this.loadSdk()]);
    if(generation!==this.generation)return;
    const client=new sdk.GoogleGenAI({apiKey:token,httpOptions:{apiVersion:'v1beta'}});
-   const session=await client.live.connect({model:'gemini-3.1-flash-live-preview',config:{responseModalities:['AUDIO'],systemInstruction:this.instruction,inputAudioTranscription:{},outputAudioTranscription:{},speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:'Kore'}}},tools:[{functionDeclarations:this.tools}]},callbacks:{onmessage:m=>{if(generation===this.generation)this.message(m,generation)},onerror:()=>{if(generation===this.generation){this.stop();this.set('failed')}},onclose:()=>{if(generation===this.generation){this.stop();this.set('ended')}}}});
+   const session=await client.live.connect({model:'gemini-3.1-flash-live-preview',config:{responseModalities:['AUDIO'],systemInstruction:this.instruction,inputAudioTranscription:{},outputAudioTranscription:{},realtimeInputConfig:{automaticActivityDetection:{disabled:false,startOfSpeechSensitivity:'START_SENSITIVITY_LOW',endOfSpeechSensitivity:'END_SENSITIVITY_LOW',prefixPaddingMs:120,silenceDurationMs:500}},speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:'Kore'}}},tools:[{functionDeclarations:this.tools}]},callbacks:{onmessage:m=>{if(generation===this.generation)this.message(m,generation)},onerror:()=>{if(generation===this.generation){this.diagnostic('connection-error');this.stop();this.set('failed')}},onclose:event=>{if(generation===this.generation){this.diagnostic('connection-closed',event?.code);this.stop();this.set('ended')}}}});
    if(generation!==this.generation){session.close();return;}
    this.session=session;if(!textOnly)this.screen.start();if(textOnly){this.set('writing');return;}this.nextTime=this.context.currentTime;
    this.source=this.context.createMediaStreamSource(stream);
@@ -76,11 +77,11 @@ export class LiveVoice {
  message(message,generation){
   for(const call of message.toolCall?.functionCalls||[])void this.tool(call,generation);
   const content=message.serverContent;if(!content)return;
-  if(content.interrupted){this.interrupt();this.dropAudio=false;}
+  if(content.interrupted){this.diagnostic('remote-interruption');this.interrupt();this.dropAudio=false;}
   if(content.inputTranscription?.text){this.screen.activity();this.onText('user',content.inputTranscription.text);}
   if(content.outputTranscription?.text)this.onText('assistant',content.outputTranscription.text);
   for(const part of content.modelTurn?.parts||[])if(part.inlineData?.data&&!this.textOnly)this.play(part.inlineData.data);
-  if(content.turnComplete)this.dropAudio=false;
+  if(content.turnComplete){this.diagnostic('turn-complete');this.dropAudio=false;}
   if(content.turnComplete&&!this.sources.size)this.set(this.textOnly?'writing':this.muted?'muted':'listening');
  }
  play(data){
@@ -90,7 +91,7 @@ export class LiveVoice {
   for(let i=0;i<channel.length;i++)channel[i]=values.getInt16(i*2,true)/32768;
   const source=this.context.createBufferSource();source.buffer=buffer;source.connect(this.context.destination);
   source.onended=()=>{this.sources.delete(source);source.disconnect();this.screen.activity();if(this.active&&!this.sources.size)this.set(this.muted?'muted':'listening')};
-  this.screen.activity();this.sources.add(source);this.nextTime=Math.max(this.context.currentTime,this.nextTime||0);source.start(this.nextTime);this.nextTime+=buffer.duration;this.set('speaking');
+  this.screen.activity();const first=!this.sources.size;if(first)this.diagnostic('playback-start');this.sources.add(source);this.nextTime=Math.max(this.context.currentTime+(first ? 0.08 : 0),this.nextTime||0);source.start(this.nextTime);this.nextTime+=buffer.duration;this.set('speaking');
  }
  mute(){if(!this.active||!this.session||this.textOnly)return;this.muted=!this.muted;this.stream?.getTracks().forEach(t=>t.enabled=!this.muted);if(this.muted)this.session?.sendRealtimeInput({audioStreamEnd:true});this.set(this.muted?'muted':this.active?'listening':'idle');}
  interrupt(){if(this.active&&!this.session)return;this.dropAudio=true;for(const source of this.sources){source.onended=null;try{source.stop();source.disconnect()}catch{}}this.sources.clear();this.nextTime=this.context?.currentTime||0;this.set(this.active?(this.textOnly?'writing':this.muted?'muted':'listening'):'idle');}
