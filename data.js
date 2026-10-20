@@ -7,12 +7,12 @@ let sdk,db,auth,person=null,demo=false,mem,initPromise,memOwner;
 export const user=()=>person;
 export const isDemo=()=>demo;
 let agentSandboxId=null,agentSandboxOwner=null;
-export function isAgentSandbox(p){return !!person&&agentSandboxOwner===person.uid&&p?.id===agentSandboxId&&mem?.patients.some(x=>x===p&&x._agentSandbox);}
+export function isAgentSandbox(p){return !!person&&agentSandboxOwner===person.uid&&p?.id===agentSandboxId&&mem?.patients.some(x=>x===p&&x._example);}
 export function createAgentSandbox(){
  if(!person)throw Error('سجل الدخول أو اختر استكشاف المنصة');
  ensureExample();
- const old=mem.patients.find(x=>isAgentSandbox(x));if(old)return old;
- const sample=makeExample(person.uid);sample.patient.id='agent-test-'+operationId();sample.patient._agentSandbox=true;sample.patient.name='سارة';sample.patient.relation='';
+ const old=mem.patients.find(x=>x._example);if(old)return old;
+ const sample=makeExample(person.uid);
  agentSandboxId=sample.patient.id;agentSandboxOwner=person.uid;
  mem.patients.push(sample.patient);mem.entries[sample.patient.id]=sample.entries;
  return sample.patient;
@@ -34,7 +34,7 @@ function ensureExample(){
  if(memOwner===uid()&&mem)return;
  memOwner=uid();mem={patients:[],members:[],entries:{}};
  let removed=false;try{removed=window.localStorage.getItem('afiyah-example-removed:'+uid())==='1';}catch{}
- if(!removed){const sample=makeExample(uid());mem.patients=[sample.patient];mem.entries[sample.patient.id]=sample.entries;}
+ if(!removed){const sample=makeExample(uid());agentSandboxId=sample.patient.id;agentSandboxOwner=uid();mem.patients=[sample.patient];mem.entries[sample.patient.id]=sample.entries;}
 }
 export function startDemo(){demo=true;person={uid:'demo-owner',email:'demo@example.com',displayName:'زائر عافية'};ensureExample();return mem.patients[0];}
 export async function patients(){ensureExample();if(demo)return mem.patients;const own=[];for(const name of [root,'patients']){const found=await list(col(name),[sdk.where('ownerId','==',uid())]);own.push(...found.map(p=>({...p,timezone:p.timezone||'Asia/Riyadh',_legacy:name==='patients'})));}const memberships=await invitations(false);for(const m of memberships.filter(x=>x.status==='active')){if(own.some(p=>p.id===m.patientId&&!!p._legacy===!!m._legacy))continue;try{const snap=await sdk.getDoc(ref(m._legacy?'patients':root,m.patientId));if(snap.exists()&&!snap.data().deleting)own.push({...unpack(snap),timezone:snap.data().timezone||'Asia/Riyadh',_legacy:!!m._legacy,grant:m});}catch(e){if(e.code!=='permission-denied')throw e;}}return [...own,...mem.patients];}
@@ -96,7 +96,7 @@ async function changeDose(p,m,id,build,ack=false){
  });
 }
 export async function exportPatient(p){if(!owner(p))throw Error('التصدير الكامل متاح لصاحب الملف');const entries=await load(p);return {format:'afiyah-2',exportedAt:new Date().toISOString(),patient:p,entries,members:await members(p)};}
-export async function deletePatient(p){if(!owner(p))throw Error('الحذف متاح لصاحب الملف');if(local(p)){if(p._example&&!p._agentSandbox){try{window.localStorage.setItem('afiyah-example-removed:'+uid(),'1');}catch{throw Error('تعذر حفظ حذف المثال في هذا المتصفح');}}delete mem.entries[p.id];mem.members=mem.members.filter(x=>x.patientId!==p.id);mem.patients=mem.patients.filter(x=>x.id!==p.id);return;}
+export async function deletePatient(p){if(!owner(p))throw Error('الحذف متاح لصاحب الملف');if(local(p)){if(p._example){try{window.localStorage.setItem('afiyah-example-removed:'+uid(),'1');}catch{throw Error('تعذر حفظ حذف المثال في هذا المتصفح');}}delete mem.entries[p.id];mem.members=mem.members.filter(x=>x.patientId!==p.id);mem.patients=mem.patients.filter(x=>x.id!==p.id);return;}
  await sdk.updateDoc(ref(rootFor(p),p.id),{deleting:true});
  // Root remains until all pages are deleted; retries resume the same operation.
  for(const s of [...sections,'safety','doseEvents','doseGuards','audit']){for(;;){const page=await sdk.getDocs(sdk.query(col(rootFor(p),p.id,s),sdk.limit(150)));if(page.empty)break;const batch=sdk.writeBatch(db);page.docs.forEach(d=>batch.delete(d.ref));await batch.commit();}}
