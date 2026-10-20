@@ -16,7 +16,7 @@ export function mountCareAgent({data:D,getPatient,navigate,refresh,selectSandbox
  const emergency=document.createElement('details');emergency.className='emergency-panel';emergency.hidden=true;emergency.innerHTML='<summary>مساعدة عاجلة</summary><p>عند طارئ محتمل اطلب المساعدة العاجلة ولا تنتظر الوكيل</p><label>البلد الحالي <select><option value="">اختر البلد</option><option value="SA">السعودية</option><option value="other">بلد آخر</option></select></label><div class="calls"></div>';emergency.querySelector('summary').insertAdjacentHTML('beforeend',chevron);$('#agent-results').after(emergency);
  const country=()=>emergency.querySelector('select').value;
  emergency.querySelector('select').onchange=()=>{emergency.querySelector('.calls').innerHTML=country()==='SA'?'<a href="tel:997">الإسعاف 997</a><a href="tel:937">استشارة صحية 937</a>':'تحقق من رقم الطوارئ في بلدك الحالي';};
- let currentKey='',tab='today',expanded=false,minimized=false,stream=null,reviewDialog=null,cancelReview=null,sessionKey='',transcriptRow=null,transcriptRole='',inputText='';
+ let currentKey='',tab='today',expanded=true,minimized=false,stream=null,reviewDialog=null,cancelReview=null,sessionKey='',transcriptRow=null,transcriptRole='',inputText='';
  const sessionAllowed=()=>D.isAgentSandbox(getPatient());
  function card(text){const el=document.createElement('article');el.className='agent-card';el.textContent=text;$('#agent-results').append(el);return el;}
  function stopCamera(){stream?.getTracks().forEach(t=>t.stop());stream=null;$('#agent-input-area').replaceChildren();}
@@ -59,24 +59,16 @@ export function mountCareAgent({data:D,getPatient,navigate,refresh,selectSandbox
   if(name!=='care_action')return {ok:false,message:'أداة غير مسموحة'};
   const key=currentKey;const result=await run(args,sessionKey+':'+id);if(currentKey===key)display(result);return result;
  }});
- // Reserve the full card's slot before fixing it to the viewport. Otherwise
- // removing it from flow changes the scroll threshold and makes it jump.
- let inlineHeight=0,scrollFloating=false;
+ // Presentation changes only through explicit user controls.
  function position(){
-  const anchor=document.getElementById('agent-anchor');
-  const detached=host.classList.contains('is-floating')||host.classList.contains('is-expanded');
-  if(!detached)inlineHeight=Math.max(80,host.getBoundingClientRect().height);
-  if(anchor&&detached)anchor.style.minHeight=inlineHeight+'px';
-  const bottom=anchor?.getBoundingClientRect().bottom;
-  if(bottom!==undefined){if(bottom<70)scrollFloating=true;else if(bottom>110)scrollFloating=false;}
-  const floating=!expanded&&(minimized||(voice.active&&(tab!=='today'||!anchor||scrollFloating)));
-  if(anchor)anchor.style.minHeight=(floating||expanded?inlineHeight:80)+'px';
-  host.classList.toggle('is-floating',floating);host.classList.toggle('is-expanded',expanded);
-  const label=floating?'توسيع المساعد':'تصغير المساعد';
+  const floating=minimized&&!expanded;
+  host.classList.toggle('is-floating',floating);
+  host.classList.toggle('is-expanded',!floating);
+  const label=floating?'توسيع المساعد':'تصغير المساعد لمشاهدة الصفحة';
   if($('#agent-expand').getAttribute('aria-label')!==label){
    $('#agent-expand').innerHTML=floating?expandIcon:minimizeIcon;
    $('#agent-expand').setAttribute('aria-label',label);
-   $('#agent-expand').title=floating?label:'تصغير المساعد مع استمرار المحادثة';
+   $('#agent-expand').title=label;
   }
  }
 
@@ -112,12 +104,12 @@ export function mountCareAgent({data:D,getPatient,navigate,refresh,selectSandbox
  $('#agent-attach').onclick=()=>{if(sessionAllowed())expandInput('attachment');else card('اضغط جرب عافية أولا')};
  $('#agent-camera').onclick=async()=>{if(!sessionAllowed())return;stopCamera();const key=currentKey;const video=document.createElement('video');video.autoplay=true;video.playsInline=true;video.muted=true;video.style.width='100%';const close=document.createElement('button');close.textContent='إغلاق الكاميرا';close.onclick=stopCamera;$('#agent-input-area').append(video,close);try{const next=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});if(key!==currentKey||!video.isConnected){next.getTracks().forEach(t=>t.stop());return;}stream=next;video.srcObject=stream;card('الكاميرا للمعاينة المحلية فقط، الصورة لا ترسل للمساعد')}catch{stopCamera();card('تعذر تشغيل الكاميرا')}};
  window.addEventListener('keydown',e=>{if(e.key==='Escape'&&expanded){expanded=false;minimized=true;position();$('#agent-expand').focus();}});
- window.addEventListener('scroll',position,{passive:true});window.addEventListener('resize',position,{passive:true});
- if(globalThis.ResizeObserver)new ResizeObserver(()=>{if(!host.classList.contains('is-floating')&&!host.classList.contains('is-expanded'))position()}).observe(host);window.addEventListener('pagehide',()=>{voice.stop();stopCamera()});
- return {park(){if(host.isConnected)document.body.append(host)},update({patient,tab:nextTab,logged,loading}){
+ 
+ window.addEventListener('pagehide',()=>{voice.stop();stopCamera()});
+ return {park(){},update({patient,tab:nextTab,logged,loading}){
   tab=nextTab;const key=logged?D.user()?.uid+':'+(patient?.id||''):'';
-  if(key!==currentKey){$('#agent-notice').textContent='';emergency.hidden=true;emergency.open=false;voice.stop();stopCamera();cancelReview?.();$('#agent-results').replaceChildren();$('#agent-transcript').replaceChildren();transcriptRow=null;transcriptRole='';expanded=false;minimized=false;scrollFloating=false;currentKey=key;}
-  host.hidden=false;const anchor=document.getElementById('agent-anchor');if(anchor)anchor.append(host);
+  if(key!==currentKey){$('#agent-notice').textContent='';emergency.hidden=true;emergency.open=false;voice.stop();stopCamera();cancelReview?.();$('#agent-results').replaceChildren();$('#agent-transcript').replaceChildren();transcriptRow=null;transcriptRole='';currentKey=key;}
+  host.hidden=false;
   $('#agent-person').textContent=patient?patient.name+' · '+(patient._example?'مثال تجريبي':'الملف المحدد'): '';
   $('#agent-test').hidden=!patient||D.isAgentSandbox(patient);
   $('#agent-mic').disabled=!!loading||['permission','connecting'].includes(voice.state);position();

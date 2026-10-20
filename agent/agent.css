@@ -424,3 +424,9 @@
 #care-agent.is-floating .agent-mini button{min-width:44px;min-height:44px}
 #care-agent #agent-mic:disabled{cursor:wait;opacity:.75}
 #care-agent.is-expanded{overscroll-behavior:contain}
+
+/* Large voice surface stays in front until the user minimizes it. */
+#care-agent.is-expanded{inset:88px auto auto 50%;transform:translateX(-50%);width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - 104px);box-sizing:border-box;box-shadow:0 16px 64px #14234324;overflow:auto}
+#care-agent.is-floating{transform:none}
+#agent-anchor{min-height:480px}
+@media(max-width:700px){#care-agent.is-expanded{inset:80px auto auto 50%;width:calc(100vw - 24px);max-height:calc(100dvh - 96px);padding:16px}#care-agent.is-expanded .agent-voice{margin:20px auto 16px;gap:16px}#agent-anchor{min-height:440px}}
